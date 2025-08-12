@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useState} from 'react';
 import { 
   View, 
   Text, 
@@ -9,179 +9,157 @@ import {
   Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { useWorkoutStore } from '../store/workoutStore';
+import ExerciseSwapModal from '../components/ExerciseSwapModal';
+import WorkoutTrackerModal from '../components/WorkoutTrackerModal';
 export default function WorkoutScreen() {
-  
+  const { 
+    currentWorkout, 
+    lastAnalysis, 
+    getAlternativeExercises, 
+    swapExercise,
+    startWorkout,
+    completeSet,
+    nextExercise,
+    completeWorkout
+  } = useWorkoutStore();
+  const [swapModalVisible, setSwapModalVisible] = useState(false);
+  const [trackerModalVisible, setTrackerModalVisible] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState(null);
+  const [alternatives, setAlternatives] = useState([]);
   // Event Handlers
   const handleSwapExercise = (exerciseName) => {
-    Alert.alert('Swap Exercise', `Would you like to swap ${exerciseName}?`);
+    const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
+    const alts = getAlternativeExercises(exercise.target, exerciseName);
+    
+    setSelectedExercise(exercise);
+    setAlternatives(alts);
+    setSwapModalVisible(true);
   };
 
+  const handleSwapConfirm = (newExercise) => {
+    swapExercise(selectedExercise.id, newExercise, selectedExercise.target);
+    setSwapModalVisible(false);
+    Alert.alert('Exercise Swapped!', `Replaced with ${newExercise.name}`);
+  };
+
+  const handleStartExercise = (exerciseName) => {
+    const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
+    setSelectedExercise(exercise);
+    setTrackerModalVisible(true);
+  };
+  const handleExerciseComplete = () => {
+    setTrackerModalVisible(false);
+    nextExercise();
+    Alert.alert('Great job!', 'Move on to your next exercise when ready.');
+  };
+  const handleSetComplete = (exerciseId, setNumber, reps, weight) => {
+    completeSet(exerciseId, setNumber, reps, weight);
+  };
   const handleShowDemo = (exerciseName) => {
     Alert.alert('Exercise Demo', `Showing ${exerciseName} demonstration`);
   };
 
-  const handleStartExercise = (exerciseName) => {
-    Alert.alert('Start Exercise', `Starting ${exerciseName} workout!`);
-  };
+  
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
-        {/* Header */}
-        <LinearGradient
-          colors={['#6366f1', '#8b5cf6']}
-          style={styles.header}
-        >
-          <Text style={styles.headerTitle}>Today's Workout</Text>
-          <Text style={styles.headerSubtitle}>Upper Body Focus • 45 minutes</Text>
-        </LinearGradient>
+    <ScrollView style={styles.content}>
+      {/* Dynamic Header */}
+      <LinearGradient
+        colors={['#6366f1', '#8b5cf6']}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>{currentWorkout.title}</Text>
+        <Text style={styles.headerSubtitle}>{currentWorkout.subtitle}</Text>
+        {lastAnalysis && (
+          <Text style={styles.analysisNote}>
+            📸 Based on your photo analysis
+          </Text>
+        )}
+      </LinearGradient>
 
-        {/* Exercise Card 1 - Push-ups */}
-        <View style={styles.exerciseCard}>
+      {/* Dynamic Exercise Cards */}
+      {currentWorkout.exercises.map((exercise, index) => (
+        <View key={exercise.id || index} style={styles.exerciseCard}>
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseName}>Push-ups</Text>
-            <View style={styles.targetBadge}>
-              <Text style={styles.targetText}>CHEST</Text>
+            <Text style={styles.exerciseName}>{exercise.name}</Text>
+            <View style={[
+              styles.targetBadge, 
+              { backgroundColor: exercise.color },
+              exercise.priority === 'HIGH' && styles.highPriorityBadge
+            ]}>
+              <Text style={styles.targetText}>{exercise.target}</Text>
+              {exercise.priority === 'HIGH' && (
+                <Text style={styles.priorityIndicator}>🔥</Text>
+              )}
             </View>
           </View>
           
           <View style={styles.exerciseDetails}>
             <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>3</Text>
+              <Text style={styles.detailValue}>{exercise.sets}</Text>
               <Text style={styles.detailLabel}>Sets</Text>
             </View>
             <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>8-12</Text>
-              <Text style={styles.detailLabel}>Reps</Text>
+              <Text style={styles.detailValue}>{exercise.reps}</Text>
+              <Text style={styles.detailLabel}>
+                {exercise.weight ? 'Reps' : 'Duration'}
+              </Text>
             </View>
             <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>60s</Text>
-              <Text style={styles.detailLabel}>Rest</Text>
+              <Text style={styles.detailValue}>
+                {exercise.weight || exercise.rest}
+              </Text>
+              <Text style={styles.detailLabel}>
+                {exercise.weight ? 'Weight' : 'Rest'}
+              </Text>
             </View>
           </View>
 
           <View style={styles.exerciseActions}>
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => handleSwapExercise('Push-ups')}
+              onPress={() => handleSwapExercise(exercise.name)}
             >
               <Text style={styles.actionButtonText}>Swap</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => handleShowDemo('Push-ups')}
+              onPress={() => handleShowDemo(exercise.name)}
             >
               <Text style={styles.actionButtonText}>Demo</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.actionButton, styles.primaryButton]}
-              onPress={() => handleStartExercise('Push-ups')}
+              onPress={() => handleStartExercise(exercise.name)}
             >
-              <Text style={[styles.actionButtonText, styles.primaryButtonText]}>Start</Text>
+              <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
+                Start
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
+      ))}
+    </ScrollView>
+    <ExerciseSwapModal
+        visible={swapModalVisible}
+        onClose={() => setSwapModalVisible(false)}
+        exerciseToSwap={selectedExercise}
+        alternatives={alternatives}
+        onSwapConfirm={handleSwapConfirm}
+      />
 
-        {/* Exercise Card 2 - Dumbbell Rows */}
-        <View style={styles.exerciseCard}>
-          <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseName}>Dumbbell Rows</Text>
-            <View style={[styles.targetBadge, { backgroundColor: '#f59e0b' }]}>
-              <Text style={styles.targetText}>BACK</Text>
-            </View>
-          </View>
-          
-          <View style={styles.exerciseDetails}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>3</Text>
-              <Text style={styles.detailLabel}>Sets</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>10-12</Text>
-              <Text style={styles.detailLabel}>Reps</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>25lbs</Text>
-              <Text style={styles.detailLabel}>Weight</Text>
-            </View>
-          </View>
-
-          <View style={styles.exerciseActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleSwapExercise('Dumbbell Rows')}
-            >
-              <Text style={styles.actionButtonText}>Swap</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleShowDemo('Dumbbell Rows')}
-            >
-              <Text style={styles.actionButtonText}>Demo</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.primaryButton]}
-              onPress={() => handleStartExercise('Dumbbell Rows')}
-            >
-              <Text style={[styles.actionButtonText, styles.primaryButtonText]}>Start</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Exercise Card 3 - Shoulder Press */}
-        <View style={styles.exerciseCard}>
-          <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseName}>Shoulder Press</Text>
-            <View style={[styles.targetBadge, { backgroundColor: '#8b5cf6' }]}>
-              <Text style={styles.targetText}>SHOULDERS</Text>
-            </View>
-          </View>
-          
-          <View style={styles.exerciseDetails}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>3</Text>
-              <Text style={styles.detailLabel}>Sets</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>8-10</Text>
-              <Text style={styles.detailLabel}>Reps</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>20lbs</Text>
-              <Text style={styles.detailLabel}>Weight</Text>
-            </View>
-          </View>
-
-          <View style={styles.exerciseActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleSwapExercise('Shoulder Press')}
-            >
-              <Text style={styles.actionButtonText}>Swap</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleShowDemo('Shoulder Press')}
-            >
-              <Text style={styles.actionButtonText}>Demo</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.primaryButton]}
-              onPress={() => handleStartExercise('Shoulder Press')}
-            >
-              <Text style={[styles.actionButtonText, styles.primaryButtonText]}>Start</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <WorkoutTrackerModal
+        visible={trackerModalVisible}
+        exercise={selectedExercise}
+        onClose={() => setTrackerModalVisible(false)}
+        onSetComplete={handleSetComplete}
+        onExerciseComplete={handleExerciseComplete}
+      />
+  </SafeAreaView>
   );
 }
 
@@ -290,5 +268,19 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: 'white',
+  },
+  analysisNote: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  highPriorityBadge: {
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  priorityIndicator: {
+    marginLeft: 4,
+    fontSize: 10,
   },
 });
