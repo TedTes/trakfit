@@ -1,4 +1,4 @@
-import React,{useState} from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
@@ -12,6 +12,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useWorkoutStore } from '../store/workoutStore';
 import ExerciseSwapModal from '../components/ExerciseSwapModal';
 import WorkoutTrackerModal from '../components/WorkoutTrackerModal';
+import { useState } from 'react';
+import SwipeableWorkout from '../components/SwipeableWorkout';
+import WorkoutStatsModal from '../components/WorkoutStatsModal';
 export default function WorkoutScreen() {
   const { 
     currentWorkout, 
@@ -27,6 +30,9 @@ export default function WorkoutScreen() {
   const [trackerModalVisible, setTrackerModalVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [alternatives, setAlternatives] = useState([]);
+  const [isSwipeMode, setIsSwipeMode] = useState(false);
+  const [workoutStats, setWorkoutStats] = useState(null);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   // Event Handlers
   const handleSwapExercise = (exerciseName) => {
     const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
@@ -37,6 +43,19 @@ export default function WorkoutScreen() {
     setSwapModalVisible(true);
   };
 
+  const handleStartSwipeWorkout = () => {
+    setIsSwipeMode(true);
+  };
+
+  const handleWorkoutComplete = (stats) => {
+    setWorkoutStats(stats);
+    setShowStatsModal(true);
+    setIsSwipeMode(false);
+  };
+
+  const handleExitSwipeMode = () => {
+    setIsSwipeMode(false);
+  };
   const handleSwapConfirm = (newExercise) => {
     swapExercise(selectedExercise.id, newExercise, selectedExercise.target);
     setSwapModalVisible(false);
@@ -64,6 +83,13 @@ export default function WorkoutScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+    { isSwipeMode ? (
+        <SwipeableWorkout
+          workout={currentWorkout}
+          onWorkoutComplete={handleWorkoutComplete}
+          onExit={handleExitSwipeMode}
+        />
+      ) :(
     <ScrollView style={styles.content}>
       {/* Dynamic Header */}
       <LinearGradient
@@ -143,7 +169,14 @@ export default function WorkoutScreen() {
           </View>
         </View>
       ))}
-    </ScrollView>
+ 
+    <TouchableOpacity 
+            style={styles.swipeWorkoutButton}
+            onPress={handleStartSwipeWorkout}
+          >
+            <Text style={styles.swipeWorkoutText}>🔥 Start Swipe Workout</Text>
+          </TouchableOpacity>
+          </ScrollView>)}
     <ExerciseSwapModal
         visible={swapModalVisible}
         onClose={() => setSwapModalVisible(false)}
@@ -158,6 +191,15 @@ export default function WorkoutScreen() {
         onClose={() => setTrackerModalVisible(false)}
         onSetComplete={handleSetComplete}
         onExerciseComplete={handleExerciseComplete}
+      />
+        <WorkoutStatsModal
+        visible={showStatsModal}
+        workoutStats={workoutStats}
+        onClose={() => setShowStatsModal(false)}
+        onNewWorkout={() => {
+          setShowStatsModal(false);
+          setIsSwipeMode(true);
+        }}
       />
   </SafeAreaView>
   );
@@ -282,5 +324,17 @@ const styles = StyleSheet.create({
   priorityIndicator: {
     marginLeft: 4,
     fontSize: 10,
+  },
+  swipeWorkoutButton: {
+    backgroundColor: '#ef4444',
+    margin: 20,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  swipeWorkoutText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
