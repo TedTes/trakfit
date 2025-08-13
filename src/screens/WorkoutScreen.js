@@ -15,6 +15,8 @@ import WorkoutTrackerModal from '../components/WorkoutTrackerModal';
 import { useState } from 'react';
 import SwipeableWorkout from '../components/SwipeableWorkout';
 import WorkoutStatsModal from '../components/WorkoutStatsModal';
+import {exerciseDatabase} from '../data/exerciseDatabase';
+
 export default function WorkoutScreen() {
   const { 
     currentWorkout, 
