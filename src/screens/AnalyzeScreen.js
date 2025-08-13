@@ -9,16 +9,17 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useWorkoutStore } from '../store/workoutStore';
 
 export default function AnalyzeScreen() {
-  
+  const { generateNewWorkout, replaceCurrentWorkout, updateUserPreferences,userPreferences,generateMealPlan } = useWorkoutStore();
   const [capturedImage, setCapturedImage] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const updateWorkoutFromAnalysis = useWorkoutStore(state => state.updateWorkoutFromAnalysis);
+
   useEffect(() => {
     requestCameraPermission();
   }, []);
@@ -37,7 +38,7 @@ export default function AnalyzeScreen() {
   const handleTakePhoto = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [3, 4], // Good for body photos
         quality: 0.8, // Balance between quality and file size
@@ -57,85 +58,90 @@ export default function AnalyzeScreen() {
     setIsAnalyzing(true);
     
     try {
-      // Simulate AI processing time
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Enhanced mock analysis with more detailed results
       const mockAnalysis = {
         timestamp: new Date().toISOString(),
         confidence: 87,
         posture: 'Good overall posture with minor corrections needed',
-        imbalances: [
-          'right stronger', // This will trigger specific exercises
-          'shoulders uneven'
-        ],
+        imbalances: ['right stronger', 'shoulders uneven'],
         weakAreas: ['chest', 'core'],
         strengths: ['legs', 'back'],
         recommendations: [
           'Focus on left-side unilateral exercises',
           'Increase chest development priority', 
-          'Add core stability work',
-          'Maintain current leg training'
+          'Add core stability work'
         ],
-        muscleScores: {
-          chest: 72,
-          back: 86,
-          shoulders: 78,
-          arms: 81,
-          core: 69,
-          legs: 92
+        muscleScores: { chest: 72, back: 86, shoulders: 78, arms: 81, core: 69, legs: 92 },
+        // ADD nutrition recommendations:
+        nutritionNeeds: {
+          goalAdjustment: 'muscle_building', // Based on low muscle scores
+          proteinIncrease: 15, // 15% more protein needed
+          budgetRecommendation: 'prioritize_protein_sources'
         }
       };
       
-      // Update the workout store with new analysis
-      updateWorkoutFromAnalysis(mockAnalysis);
+      // Update workout preferences
+      const workoutPreferences = {
+        targetMuscles: mockAnalysis.weakAreas,
+        equipment: ['bodyweight', 'dumbbells'],
+        goal: 'hypertrophy', // Based on muscle building need
+        experience: 'intermediate',
+        duration: 45
+      };
+      
+      // UPDATE nutrition preferences based on analysis
+      const nutritionPreferences = {
+        weeklyBudget: userPreferences.weeklyBudget,
+        preferredStore: userPreferences.preferredStore,
+        // ADD goal-based adjustments:
+        goal: 'hypertrophy' // This will increase protein in meal planning
+      };
+      
+      updateUserPreferences({ ...workoutPreferences, ...nutritionPreferences });
+      
+      // Generate both workout and meal plan
+      const aiWorkout = generateNewWorkout();
+      const mealPlan = generateMealPlan();
       
       setIsAnalyzing(false);
-      showAnalysisResults(mockAnalysis);
+      showAnalysisResults(mockAnalysis, aiWorkout, mealPlan);
       
     } catch (error) {
       setIsAnalyzing(false);
+      console.log(error);
       Alert.alert('Analysis Error', 'Failed to analyze photo. Please try again.');
     }
   };
-  const showAnalysisResults = (analysis) => {
-    const { confidence, imbalances, recommendations, muscleScores } = analysis;
+  const showAnalysisResults = (analysis, generatedWorkout, mealPlan) => {
+    const { confidence, recommendations, muscleScores, nutritionNeeds } = analysis;
     
     const resultMessage = `
-🎯 Analysis Complete (${confidence}% confidence)
-
-📊 Muscle Development Scores:
-• Chest: ${muscleScores.chest}% (Needs Work)
-• Back: ${muscleScores.back}% (Good)  
-• Shoulders: ${muscleScores.shoulders}% (Average)
-• Arms: ${muscleScores.arms}% (Good)
-• Core: ${muscleScores.core}% (Needs Work)
-• Legs: ${muscleScores.legs}% (Excellent)
-
-⚠️ Key Issues:
-${imbalances.map(item => `• ${item.replace('right stronger', 'Right side stronger than left')}`).join('\n')}
-
-💡 Your workout has been automatically updated with:
-${recommendations.slice(0, 2).map(item => `• ${item}`).join('\n')}
-    `;
-
+  🎯 Analysis Complete (${confidence}% confidence)
+  
+  💪 Workout Plan:
+  "${generatedWorkout.title}" - ${generatedWorkout.exercises.length} exercises
+  
+  🍽️ Nutrition Plan:
+  Weekly meals: $${mealPlan.totalCost}/${mealPlan.budget}
+  ${nutritionNeeds.proteinIncrease}% more protein recommended
+  
+  📊 Key Focus Areas:
+  • ${recommendations.slice(0, 2).join('\n• ')}
+  `;
+  
     Alert.alert(
-      'Body Analysis Complete', 
+      'Complete Analysis', 
       resultMessage, 
       [
+        { text: 'Keep Current Plans', style: 'cancel' },
         { 
-          text: 'View My New Workout', 
+          text: 'Use Both Plans', 
           onPress: () => {
-            // Navigate to workout tab - you'll need navigation context
-            console.log('Navigate to workout tab');
-          },
-          style: 'default'
-        },
-        { 
-          text: 'Take Another Photo', 
-          onPress: () => setCapturedImage(null) 
-        },
-        { text: 'Done', style: 'default' }
+            replaceCurrentWorkout(generatedWorkout);
+            Alert.alert('✅ Success!', 'Both workout and nutrition plans updated based on your analysis!');
+          }
+        }
       ]
     );
   };

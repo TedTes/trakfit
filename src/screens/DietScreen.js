@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,26 +9,35 @@ import {
   Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import {useWorkoutStore} from "../store/workoutStore";
 export default function DietScreen() {
-  const [selectedStore, setSelectedStore] = useState('walmart');
+  const { userPreferences, generateMealPlan, updateUserPreferences } = useWorkoutStore();
+  const [mealPlan, setMealPlan] = useState(null);
+  const [selectedStore, setSelectedStore] = useState(userPreferences.preferredStore || 'walmart');
 
-  // Event Handlers
+  useEffect(() => {
+    // Generate initial meal plan
+    const plan = generateMealPlan();
+    setMealPlan(plan);
+  }, []);
+
   const handleStoreSelect = (store) => {
     setSelectedStore(store);
-    Alert.alert('Store Selected', `You selected ${store.charAt(0).toUpperCase() + store.slice(1)}`);
+    updateUserPreferences({ preferredStore: store });
   };
 
   const handleGenerateNewMeals = () => {
-    Alert.alert('Generate Meals', 'Creating new meal plan based on your budget...');
+    const newPlan = generateMealPlan();
+    setMealPlan(newPlan);
   };
 
-  const handleViewShoppingList = () => {
-    Alert.alert('Shopping List', 'Opening your optimized shopping list...');
-  };
-
-  const handleMealPress = (mealName, price) => {
-    Alert.alert('Meal Details', `${mealName}\nPrice: ${price}\n\nWould you like to see the recipe?`);
+  const handleBudgetChange = (newBudget) => {
+    updateUserPreferences({ weeklyBudget: newBudget });
+    // Regenerate meal plan with new budget
+    setTimeout(() => {
+      const newPlan = generateMealPlan();
+      setMealPlan(newPlan);
+    }, 100);
   };
 
   return (
@@ -41,44 +50,65 @@ export default function DietScreen() {
         >
           <View style={styles.budgetHeader}>
             <View>
-              <Text style={styles.budgetAmount}>$150</Text>
+              <Text style={styles.budgetAmount}>${userPreferences.weeklyBudget}</Text>
               <Text style={styles.budgetPeriod}>Weekly Budget</Text>
             </View>
             <Text style={styles.budgetIcon}>🛒</Text>
           </View>
+          
+          {mealPlan && (
+            <View style={styles.budgetSummary}>
+              <Text style={styles.budgetUsed}>
+                Used: ${mealPlan.totalCost} • Remaining: ${mealPlan.remaining}
+              </Text>
+            </View>
+          )}
         </LinearGradient>
 
-        {/* Store Selector */}
+        {/* Budget Adjustment */}
+        <View style={styles.budgetControls}>
+          <Text style={styles.controlsTitle}>Adjust Weekly Budget</Text>
+          <View style={styles.budgetOptions}>
+            {[100, 150, 200, 250].map(budget => (
+              <TouchableOpacity
+                key={budget}
+                style={[
+                  styles.budgetOption,
+                  userPreferences.weeklyBudget === budget && styles.selectedBudgetOption
+                ]}
+                onPress={() => handleBudgetChange(budget)}
+              >
+                <Text style={[
+                  styles.budgetOptionText,
+                  userPreferences.weeklyBudget === budget && styles.selectedBudgetText
+                ]}>
+                  ${budget}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Store Selector - keep your existing code but update the state */}
         <View style={styles.storeSelector}>
           <Text style={styles.storeTitle}>Select Your Store</Text>
           <View style={styles.storeOptions}>
             <TouchableOpacity 
-              style={[
-                styles.storeOption, 
-                selectedStore === 'walmart' && styles.storeSelected
-              ]}
+              style={[styles.storeOption, selectedStore === 'walmart' && styles.storeSelected]}
               onPress={() => handleStoreSelect('walmart')}
             >
               <Text style={styles.storeIcon}>🏪</Text>
               <Text style={styles.storeLabel}>Walmart</Text>
             </TouchableOpacity>
-
             <TouchableOpacity 
-              style={[
-                styles.storeOption, 
-                selectedStore === 'target' && styles.storeSelected
-              ]}
+              style={[styles.storeOption, selectedStore === 'target' && styles.storeSelected]}
               onPress={() => handleStoreSelect('target')}
             >
               <Text style={styles.storeIcon}>🎯</Text>
               <Text style={styles.storeLabel}>Target</Text>
             </TouchableOpacity>
-
             <TouchableOpacity 
-              style={[
-                styles.storeOption, 
-                selectedStore === 'kroger' && styles.storeSelected
-              ]}
+              style={[styles.storeOption, selectedStore === 'kroger' && styles.storeSelected]}
               onPress={() => handleStoreSelect('kroger')}
             >
               <Text style={styles.storeIcon}>🛍️</Text>
@@ -88,67 +118,39 @@ export default function DietScreen() {
         </View>
 
         {/* Meal Plan */}
-        <View style={styles.mealPlan}>
-          <View style={styles.mealPlanHeader}>
-            <Text style={styles.mealPlanTitle}>This Week's Meals</Text>
-            <TouchableOpacity 
-              style={styles.generateButton}
-              onPress={handleGenerateNewMeals}
-            >
-              <Text style={styles.generateButtonText}>Generate New</Text>
-            </TouchableOpacity>
+        {mealPlan && (
+          <View style={styles.mealPlan}>
+            <View style={styles.mealPlanHeader}>
+              <Text style={styles.mealPlanTitle}>This Week's Meals</Text>
+              <TouchableOpacity 
+                style={styles.generateButton}
+                onPress={handleGenerateNewMeals}
+              >
+                <Text style={styles.generateButtonText}>Generate New</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {mealPlan.weeklyMeals.slice(0, 1)[0]?.meals.map((meal, index) => (
+              <TouchableOpacity 
+                key={index}
+                style={styles.mealItem}
+                onPress={() => console.log('Meal details:', meal)}
+              >
+                <Text style={styles.mealName}>{meal.name}</Text>
+                <Text style={styles.mealPrice}>${meal.baseCost}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            <View style={styles.totalSection}>
+              <Text style={styles.totalText}>
+                Weekly Total: ${mealPlan.totalCost} / ${mealPlan.budget}
+              </Text>
+              <Text style={styles.dailyAverage}>
+                Daily Average: ${mealPlan.dailyAverage}
+              </Text>
+            </View>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.mealItem}
-            onPress={() => handleMealPress('Chicken & Rice Bowl', '$3.25')}
-          >
-            <Text style={styles.mealName}>Chicken & Rice Bowl</Text>
-            <Text style={styles.mealPrice}>$3.25</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.mealItem}
-            onPress={() => handleMealPress('Protein Smoothie', '$2.50')}
-          >
-            <Text style={styles.mealName}>Protein Smoothie</Text>
-            <Text style={styles.mealPrice}>$2.50</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.mealItem}
-            onPress={() => handleMealPress('Turkey Sandwich', '$2.80')}
-          >
-            <Text style={styles.mealName}>Turkey Sandwich</Text>
-            <Text style={styles.mealPrice}>$2.80</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.mealItem}
-            onPress={() => handleMealPress('Greek Yogurt & Berries', '$1.90')}
-          >
-            <Text style={styles.mealName}>Greek Yogurt & Berries</Text>
-            <Text style={styles.mealPrice}>$1.90</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.mealItem}
-            onPress={() => handleMealPress('Salmon & Vegetables', '$4.50')}
-          >
-            <Text style={styles.mealName}>Salmon & Vegetables</Text>
-            <Text style={styles.mealPrice}>$4.50</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.totalSection}>
-            <Text style={styles.totalText}>Total: $147.50 / $150.00</Text>
-            <TouchableOpacity 
-              style={styles.shoppingListButton}
-              onPress={handleViewShoppingList}
-            >
-              <Text style={styles.shoppingListButtonText}>View Shopping List</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -302,5 +304,63 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  budgetSummary: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.3)',
+  },
+  budgetUsed: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  budgetControls: {
+    backgroundColor: 'white',
+    padding: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  controlsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  budgetOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  budgetOption: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  selectedBudgetOption: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  budgetOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  selectedBudgetText: {
+    color: 'white',
+  },
+  dailyAverage: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
