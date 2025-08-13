@@ -15,7 +15,8 @@ import WorkoutTrackerModal from '../components/WorkoutTrackerModal';
 import { useState } from 'react';
 import SwipeableWorkout from '../components/SwipeableWorkout';
 import WorkoutStatsModal from '../components/WorkoutStatsModal';
-import {exerciseDatabase} from '../data/exerciseDatabase';
+import PreferencesScreen from '../screens/PreferencesScreen';
+import ExerciseAnimationModal from '../components/ExerciseAnimationModal';
 
 export default function WorkoutScreen() {
   const { 
@@ -26,8 +27,15 @@ export default function WorkoutScreen() {
     startWorkout,
     completeSet,
     nextExercise,
-    completeWorkout
+    completeWorkout,
+    userPreferences,
+    generator,
+    replaceCurrentWorkout ,
+    generateNewWorkout,
+    formatWorkoutForDisplay,
+    getProgressSummary
   } = useWorkoutStore();
+
   const [swapModalVisible, setSwapModalVisible] = useState(false);
   const [trackerModalVisible, setTrackerModalVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -35,6 +43,9 @@ export default function WorkoutScreen() {
   const [isSwipeMode, setIsSwipeMode] = useState(false);
   const [workoutStats, setWorkoutStats] = useState(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [showAnimationModal, setShowAnimationModal] = useState(false);
+  const [animationExercise, setAnimationExercise] = useState(null);
   // Event Handlers
   const handleSwapExercise = (exerciseName) => {
     const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
@@ -49,6 +60,24 @@ export default function WorkoutScreen() {
     setIsSwipeMode(true);
   };
 
+  const handleGenerateNewWorkout = () => {
+  const newWorkout = generateNewWorkout();
+  
+  Alert.alert(
+    '🤖 AI Workout Generated!',
+    `"${newWorkout.title}"\n${newWorkout.exercises.length} exercises • ${Math.round(newWorkout.estimated_total_time)} minutes\n\nThis workout is customized for your preferences and equipment.`,
+    [
+      { text: 'Keep Current Workout', style: 'cancel' },
+      { 
+        text: 'Use New Workout', 
+        onPress: () => {
+          replaceCurrentWorkout(newWorkout);
+          Alert.alert('✅ Workout Updated!', 'Your new AI-generated workout is ready.');
+        }
+      }
+    ]
+  );
+};
   const handleWorkoutComplete = (stats) => {
     setWorkoutStats(stats);
     setShowStatsModal(true);
@@ -61,7 +90,7 @@ export default function WorkoutScreen() {
   const handleSwapConfirm = (newExercise) => {
     swapExercise(selectedExercise.id, newExercise, selectedExercise.target);
     setSwapModalVisible(false);
-    Alert.alert('Exercise Swapped!', `Replaced with ${newExercise.name}`);
+    Alert.alert('Exercise Swapped!', `Replaced "${selectedExercise.name}" with "${newExercise.name}"`);
   };
 
   const handleStartExercise = (exerciseName) => {
@@ -78,13 +107,16 @@ export default function WorkoutScreen() {
     completeSet(exerciseId, setNumber, reps, weight);
   };
   const handleShowDemo = (exerciseName) => {
-    Alert.alert('Exercise Demo', `Showing ${exerciseName} demonstration`);
+    const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
+    setAnimationExercise(exercise);
+    setShowAnimationModal(true);
   };
 
   
 
   return (
     <SafeAreaView style={styles.container}>
+
     { isSwipeMode ? (
         <SwipeableWorkout
           workout={currentWorkout}
@@ -93,6 +125,16 @@ export default function WorkoutScreen() {
         />
       ) :(
     <ScrollView style={styles.content}>
+      {lastAnalysis && (
+  <View style={styles.analysisStatus}>
+    <Text style={styles.analysisStatusText}>
+      🎯 Workout & Diet optimized for your photo analysis
+    </Text>
+    <Text style={styles.analysisDate}>
+      {new Date(lastAnalysis.timestamp).toLocaleDateString()}
+    </Text>
+  </View>
+)}
       {/* Dynamic Header */}
       <LinearGradient
         colors={['#6366f1', '#8b5cf6']}
@@ -171,7 +213,26 @@ export default function WorkoutScreen() {
           </View>
         </View>
       ))}
- 
+ <View style={styles.aiWorkoutSection}>
+  <Text style={styles.aiSectionTitle}>🤖 AI Workout Generator</Text>
+  <Text style={styles.aiSectionSubtitle}>
+    Get a personalized workout based on your preferences and equipment
+  </Text>
+  
+  <TouchableOpacity 
+    style={styles.generateWorkoutButton}
+    onPress={handleGenerateNewWorkout}
+  >
+    <Text style={styles.generateWorkoutText}>Generate New Workout</Text>
+  </TouchableOpacity>
+  
+  <TouchableOpacity 
+    style={styles.preferencesButton}
+    onPress={() => setShowPreferences(true)}
+  >
+    <Text style={styles.preferencesText}>⚙️ Workout Preferences</Text>
+  </TouchableOpacity>
+</View>
     <TouchableOpacity 
             style={styles.swipeWorkoutButton}
             onPress={handleStartSwipeWorkout}
@@ -203,6 +264,16 @@ export default function WorkoutScreen() {
           setIsSwipeMode(true);
         }}
       />
+      {showPreferences && (
+  <View style={StyleSheet.absoluteFill}>
+    <PreferencesScreen onClose={() => setShowPreferences(false)} />
+  </View>
+)}
+<ExerciseAnimationModal
+  visible={showAnimationModal}
+  exercise={animationExercise}
+  onClose={() => setShowAnimationModal(false)}
+/>
   </SafeAreaView>
   );
 }
@@ -338,5 +409,74 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  aiWorkoutSection: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    margin: 20,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  aiSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  aiSectionSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  generateWorkoutButton: {
+    backgroundColor: '#6366f1',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  generateWorkoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  preferencesButton: {
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  preferencesText: {
+    color: '#6366f1',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  analysisStatus: {
+    backgroundColor: '#dbeafe',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
+  },
+  analysisStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e40af',
+  },
+  analysisDate: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
   },
 });
