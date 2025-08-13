@@ -58,7 +58,24 @@ export class WorkoutGenerator {
         return hasEquipment && difficultyMatch && muscleMatch;
       });
     }
-  
+    findUncoveredMuscles(targetMuscles, coveredMuscleGroups) {
+      if (targetMuscles.includes('full_body')) {
+        // For full body, ensure we hit major muscle groups
+        const majorMuscleGroups = [
+          'chest_pectorals', 
+          'legs_quadriceps', 
+          'legs_glutes',
+          'back_latissimus',
+          'shoulders_anterior',
+          'core_abs'
+        ];
+        
+        return majorMuscleGroups.filter(muscle => !coveredMuscleGroups.has(muscle));
+      }
+      
+      // For specific target muscles, return those not yet covered
+      return targetMuscles.filter(muscle => !coveredMuscleGroups.has(muscle));
+    }
     selectOptimalExercises({ availableExercises, targetMuscles, duration, goal, previousWorkouts }) {
       const maxExercises = Math.floor(duration / 8); // ~8 minutes per exercise
       const selected = [];

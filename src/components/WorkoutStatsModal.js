@@ -57,11 +57,13 @@ export default function WorkoutStatsModal({
         </View>
 
         <View style={styles.achievements}>
-          <Text style={styles.achievementTitle}>🏆 Achievements</Text>
-          <Text style={styles.achievementText}>• Completed full workout session</Text>
-          <Text style={styles.achievementText}>• Maintained consistent pace</Text>
-          <Text style={styles.achievementText}>• Building stronger habits</Text>
-        </View>
+  <Text style={styles.achievementTitle}>🏆 Achievements</Text>
+  <Text style={styles.achievementText}>• Completed AI-optimized workout</Text>
+  <Text style={styles.achievementText}>• Following personalized nutrition plan</Text>
+  <Text style={styles.achievementText}>• Building data for better recommendations</Text>
+  {/* TODO:  if it was an AI workout: */}
+  <Text style={styles.achievementText}>• 🤖 AI workout completed successfully</Text>
+</View>
 
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.newWorkoutButton} onPress={onNewWorkout}>
