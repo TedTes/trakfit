@@ -6,124 +6,25 @@ import {
   SafeAreaView, 
   ScrollView, 
   TouchableOpacity,
-  Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWorkoutStore } from '../store/workoutStore';
-import ExerciseSwapModal from '../components/ExerciseSwapModal';
-import WorkoutTrackerModal from '../components/WorkoutTrackerModal';
-import { useState } from 'react';
-import SwipeableWorkout from '../components/SwipeableWorkout';
-import WorkoutStatsModal from '../components/WorkoutStatsModal';
-import PreferencesScreen from '../screens/PreferencesScreen';
-import ExerciseAnimationModal from '../components/ExerciseAnimationModal';
 
 export default function WorkoutScreen() {
   const { 
     currentWorkout, 
-    lastAnalysis, 
-    getAlternativeExercises, 
-    swapExercise,
-    startWorkout,
-    completeSet,
-    nextExercise,
-    completeWorkout,
-    userPreferences,
-    generator,
-    replaceCurrentWorkout ,
-    generateNewWorkout,
-    formatWorkoutForDisplay,
-    getProgressSummary
+    lastAnalysis
+
   } = useWorkoutStore();
-
-  const [swapModalVisible, setSwapModalVisible] = useState(false);
-  const [trackerModalVisible, setTrackerModalVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState(null);
-  const [alternatives, setAlternatives] = useState([]);
-  const [isSwipeMode, setIsSwipeMode] = useState(false);
-  const [workoutStats, setWorkoutStats] = useState(null);
-  const [showStatsModal, setShowStatsModal] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
-  const [showAnimationModal, setShowAnimationModal] = useState(false);
-  const [animationExercise, setAnimationExercise] = useState(null);
-  // Event Handlers
-  const handleSwapExercise = (exerciseName) => {
-    const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
-    const alts = getAlternativeExercises(exercise.target, exerciseName);
-    
-    setSelectedExercise(exercise);
-    setAlternatives(alts);
-    setSwapModalVisible(true);
-  };
-
-  const handleStartSwipeWorkout = () => {
-    setIsSwipeMode(true);
-  };
-
-  const handleGenerateNewWorkout = () => {
-  const newWorkout = generateNewWorkout();
-  
-  Alert.alert(
-    '🤖 AI Workout Generated!',
-    `"${newWorkout.title}"\n${newWorkout.exercises.length} exercises • ${Math.round(newWorkout.estimated_total_time)} minutes\n\nThis workout is customized for your preferences and equipment.`,
-    [
-      { text: 'Keep Current Workout', style: 'cancel' },
-      { 
-        text: 'Use New Workout', 
-        onPress: () => {
-          replaceCurrentWorkout(newWorkout);
-          Alert.alert('✅ Workout Updated!', 'Your new AI-generated workout is ready.');
-        }
-      }
-    ]
-  );
-};
-  const handleWorkoutComplete = (stats) => {
-    setWorkoutStats(stats);
-    setShowStatsModal(true);
-    setIsSwipeMode(false);
-  };
-
-  const handleExitSwipeMode = () => {
-    setIsSwipeMode(false);
-  };
-  const handleSwapConfirm = (newExercise) => {
-    swapExercise(selectedExercise.id, newExercise, selectedExercise.target);
-    setSwapModalVisible(false);
-    Alert.alert('Exercise Swapped!', `Replaced "${selectedExercise.name}" with "${newExercise.name}"`);
-  };
 
   const handleStartExercise = (exerciseName) => {
     const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
-    setSelectedExercise(exercise);
-    setTrackerModalVisible(true);
-  };
-  const handleExerciseComplete = () => {
-    setTrackerModalVisible(false);
-    nextExercise();
-    Alert.alert('Great job!', 'Move on to your next exercise when ready.');
-  };
-  const handleSetComplete = (exerciseId, setNumber, reps, weight) => {
-    completeSet(exerciseId, setNumber, reps, weight);
-  };
-  const handleShowDemo = (exerciseName) => {
-    const exercise = currentWorkout.exercises.find(ex => ex.name === exerciseName);
-    setAnimationExercise(exercise);
-    setShowAnimationModal(true);
   };
 
-  
 
   return (
     <SafeAreaView style={styles.container}>
 
-    { isSwipeMode ? (
-        <SwipeableWorkout
-          workout={currentWorkout}
-          onWorkoutComplete={handleWorkoutComplete}
-          onExit={handleExitSwipeMode}
-        />
-      ) :(
     <ScrollView style={styles.content}>
       {lastAnalysis && (
   <View style={styles.analysisStatus}>
@@ -188,28 +89,12 @@ export default function WorkoutScreen() {
           </View>
 
           <View style={styles.exerciseActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleSwapExercise(exercise.name)}
-            >
-              <Text style={styles.actionButtonText}>Swap</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => handleShowDemo(exercise.name)}
-            >
-              <Text style={styles.actionButtonText}>Demo</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.primaryButton]}
-              onPress={() => handleStartExercise(exercise.name)}
-            >
-              <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
-                Start
-              </Text>
-            </TouchableOpacity>
+          <TouchableOpacity 
+  style={[styles.actionButton, styles.primaryButton]}
+  onPress={() => handleStartExercise(exercise.name)}
+>
+  <Text>Log Set</Text>
+</TouchableOpacity>
           </View>
         </View>
       ))}
@@ -219,61 +104,19 @@ export default function WorkoutScreen() {
     Get a personalized workout based on your preferences and equipment
   </Text>
   
-  <TouchableOpacity 
+  {/* <TouchableOpacity 
     style={styles.generateWorkoutButton}
     onPress={handleGenerateNewWorkout}
   >
     <Text style={styles.generateWorkoutText}>Generate New Workout</Text>
-  </TouchableOpacity>
+  </TouchableOpacity> */}
   
-  <TouchableOpacity 
-    style={styles.preferencesButton}
-    onPress={() => setShowPreferences(true)}
-  >
-    <Text style={styles.preferencesText}>⚙️ Workout Preferences</Text>
-  </TouchableOpacity>
-</View>
-    <TouchableOpacity 
-            style={styles.swipeWorkoutButton}
-            onPress={handleStartSwipeWorkout}
-          >
-            <Text style={styles.swipeWorkoutText}>🔥 Start Swipe Workout</Text>
-          </TouchableOpacity>
-          </ScrollView>)}
-    <ExerciseSwapModal
-        visible={swapModalVisible}
-        onClose={() => setSwapModalVisible(false)}
-        exerciseToSwap={selectedExercise}
-        alternatives={alternatives}
-        onSwapConfirm={handleSwapConfirm}
-      />
 
-      <WorkoutTrackerModal
-        visible={trackerModalVisible}
-        exercise={selectedExercise}
-        onClose={() => setTrackerModalVisible(false)}
-        onSetComplete={handleSetComplete}
-        onExerciseComplete={handleExerciseComplete}
-      />
-        <WorkoutStatsModal
-        visible={showStatsModal}
-        workoutStats={workoutStats}
-        onClose={() => setShowStatsModal(false)}
-        onNewWorkout={() => {
-          setShowStatsModal(false);
-          setIsSwipeMode(true);
-        }}
-      />
-      {showPreferences && (
-  <View style={StyleSheet.absoluteFill}>
-    <PreferencesScreen onClose={() => setShowPreferences(false)} />
-  </View>
-)}
-<ExerciseAnimationModal
-  visible={showAnimationModal}
-  exercise={animationExercise}
-  onClose={() => setShowAnimationModal(false)}
-/>
+</View>
+
+          </ScrollView>
+ 
+
   </SafeAreaView>
   );
 }
