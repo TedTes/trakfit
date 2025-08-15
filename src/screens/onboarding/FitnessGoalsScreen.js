@@ -100,7 +100,22 @@ export default function FitnessGoalsScreen({ navigation }) {
       }
     }
   };
+  const handleContinue = () => {
+    if (validateForm()) {
+      // Save to store
+      updateFitnessGoals({
+        primary: formData.primary,
+        secondary: formData.secondary || null,
+        timeline: formData.timeline
+      });
 
+      // Move to next onboarding step
+      setOnboardingStep(2);
+      
+      // Navigate to next screen directly
+      navigation.navigate('Equipment');
+    }
+  };
   const handleTimelineSelection = (timelineKey) => {
     setFormData(prev => ({
       ...prev,
@@ -122,25 +137,7 @@ export default function FitnessGoalsScreen({ navigation }) {
     return true;
   };
 
-  const handleContinue = () => {
-    if (validateForm()) {
-      // Save to store
-      updateFitnessGoals({
-        primary: formData.primary,
-        secondary: formData.secondary || null,
-        timeline: formData.timeline
-      });
-
-      // Move to next onboarding step
-      setOnboardingStep(2);
-      
-      Alert.alert(
-        'Goals Saved!',
-        'Your fitness goals have been saved. Ready for the next step?',
-        [{ text: 'Continue', onPress: () => console.log('Navigate to equipment screen') }]
-      );
-    }
-  };
+  
 
   const getGoalInfo = (goalKey) => {
     return goalOptions.find(goal => goal.key === goalKey);

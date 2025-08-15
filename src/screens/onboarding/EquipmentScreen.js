@@ -143,11 +143,8 @@ export default function EquipmentScreen({ navigation }) {
       // Move to next onboarding step
       setOnboardingStep(3);
       
-      Alert.alert(
-        'Equipment Saved!',
-        'Your equipment preferences have been saved. Ready for the next step?',
-        [{ text: 'Continue', onPress: () => console.log('Navigate to dietary preferences screen') }]
-      );
+      // Navigate to next screen directly
+      navigation.navigate('DietaryPreferences');
     }
   };
 

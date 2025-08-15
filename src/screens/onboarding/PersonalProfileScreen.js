@@ -84,11 +84,8 @@ export default function PersonalProfileScreen({ navigation }) {
       // Move to next onboarding step
       setOnboardingStep(1);
       
-      Alert.alert(
-        'Profile Saved!',
-        'Your personal information has been saved. Ready for the next step?',
-        [{ text: 'Continue', onPress: () => console.log('Navigate to next screen') }]
-      );
+      // Navigate to next screen directly
+      navigation.navigate('FitnessGoals');
     }
   };
 
