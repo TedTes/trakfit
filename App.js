@@ -14,16 +14,14 @@ import ProfileScreen from './src/screens/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 function ProfileTabIcon({ focused, color, size }) {
-  // Get AI power level with error handling
   const getAIPowerLevel = useUserProfileStore(state => state.getAIPowerLevel);
   
   let aiPower;
   try {
     aiPower = getAIPowerLevel();
   } catch (error) {
-    // Fallback if store function doesn't exist yet
     console.log('AI Power function not ready yet, using fallback');
-    aiPower = { level: 50 }; // Default to show badge
+    aiPower = { level: 85 };
   }
   
   // Only show badge if profile is not fully complete
@@ -48,6 +46,8 @@ function ProfileTabIcon({ focused, color, size }) {
           justifyContent: 'center',
           alignItems: 'center',
           paddingHorizontal: 4,
+          borderWidth: 2,
+          borderColor: 'white',
         }}>
           <Text style={{
             color: 'white',
@@ -141,7 +141,6 @@ function MainAppNavigator() {
 export default function App() {
   return (
     <NavigationContainer>
-      {/* Always show main app - no more onboarding gate! */}
       <MainAppNavigator />
     </NavigationContainer>
   );
