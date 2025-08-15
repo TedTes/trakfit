@@ -354,21 +354,7 @@ export default function ProfileScreen() {
           <Text style={styles.profileStats}>Member since January 2025</Text>
         </View>
 
-        {/* AI Power Level */}
-        <View style={styles.aiPowerSection}>
-          <View style={styles.aiPowerHeader}>
-            <Text style={styles.aiPowerTitle}>🤖 AI Coach Power</Text>
-            <View style={styles.aiPowerBadge}>
-              <Text style={styles.aiPowerPercentage}>{aiPower.level}%</Text>
-            </View>
-          </View>
-          <Text style={styles.aiPowerDescription}>{aiPower.description}</Text>
-          <Text style={styles.aiPowerNext}>{aiPower.nextUnlock}</Text>
-          
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${aiPower.level}%` }]} />
-          </View>
-        </View>
+  
 
         {/* Profile Completion Sections */}
         <View style={styles.completionCard}>
@@ -468,51 +454,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
   },
-  
-  // AI Power Section
-  aiPowerSection: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  aiPowerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  aiPowerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  aiPowerBadge: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  aiPowerPercentage: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  aiPowerDescription: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  aiPowerNext: {
-    fontSize: 12,
-    color: '#6366f1',
-    marginBottom: 12,
-  },
+ 
   progressBar: {
     height: 8,
     backgroundColor: '#e2e8f0',

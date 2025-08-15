@@ -64,66 +64,12 @@ export default function TodaysPlanScreen() {
     };
   }
 
-  // Smart Next Action Detection
-  const getNextAction = () => {
-    const currentHour = new Date().getHours();
-    const isWorkoutCompleted = todaysPlan?.workout?.completed;
-    const isMorning = currentHour >= 6 && currentHour < 12;
-    const isAfternoon = currentHour >= 12 && currentHour < 17;
-    const isEvening = currentHour >= 17;
-
-    if (isMorning && !isWorkoutCompleted) {
-      return {
-        title: "Start Today's Workout",
-        subtitle: `${todaysPlan?.workout?.exercises?.length} exercises • ${todaysPlan?.workout?.estimated_total_time} min`,
-        icon: "🔥",
-        color: "#6366f1",
-        action: () => navigation.navigate('Execute'),
-        type: "workout"
-      };
-    }
-
-    if (isAfternoon || (isMorning && isWorkoutCompleted)) {
-      return {
-        title: "Track Your Nutrition",
-        subtitle: "Log meals and stay on track with your goals",
-        icon: "🍽️",
-        color: "#22c55e",
-        action: () => navigation.navigate('Nutrition'),
-        type: "nutrition"
-      };
-    }
-
-    if (isEvening) {
-      return {
-        title: "Evening Recovery Check",
-        subtitle: "Reflect on today and prepare for tomorrow",
-        icon: "😴",
-        color: "#8b5cf6",
-        action: () => togglePillar('recovery'),
-        type: "recovery"
-      };
-    }
-
-    // Default fallback
-    return {
-      title: "Start Today's Workout",
-      subtitle: "Begin your AI-personalized training session",
-      icon: "💪",
-      color: "#6366f1",
-      action: () => navigation.navigate('Execute'),
-      type: "workout"
-    };
-  };
-
   const togglePillar = (pillarKey) => {
     setExpandedPillars(prev => ({
       ...prev,
       [pillarKey]: !prev[pillarKey]
     }));
   };
-
-  const nextAction = getNextAction();
 
   const getCompletionStatus = () => {
     let completed = 0;
@@ -180,34 +126,6 @@ export default function TodaysPlanScreen() {
         
         {/* Daily Header */}
         <DailyHeader />
-
-        {/* AI Power Level Indicator */}
-        {profileCompletion < 100 && (
-          <TouchableOpacity 
-            style={styles.aiPowerCard}
-            onPress={() => setShowProfileDashboard(true)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[aiPower.color, aiPower.color + '90']}
-              style={styles.aiPowerGradient}
-            >
-              <View style={styles.aiPowerContent}>
-                <View style={styles.aiPowerLeft}>
-                  <Text style={styles.aiPowerTitle}>🤖 AI Power: {profileCompletion}%</Text>
-                  <Text style={styles.aiPowerDescription}>{aiPower.description}</Text>
-                  <Text style={styles.aiPowerSubtext}>
-                    Tap to complete profile for better recommendations
-                  </Text>
-                </View>
-                <View style={styles.aiPowerCircle}>
-                  <Text style={styles.aiPowerPercentage}>{profileCompletion}%</Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
         {/* Daily Progress Overview */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
@@ -226,28 +144,6 @@ export default function TodaysPlanScreen() {
             <View style={[styles.progressFill, { width: `${status.percentage}%` }]} />
           </View>
         </View>
-
-        {/* Smart Next Action */}
-        <TouchableOpacity
-          style={styles.nextActionCard}
-          onPress={nextAction.action}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={[nextAction.color, nextAction.color + '90']}
-            style={styles.nextActionGradient}
-          >
-            <View style={styles.nextActionContent}>
-              <Text style={styles.nextActionIcon}>{nextAction.icon}</Text>
-              <View style={styles.nextActionText}>
-                <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
-                <Text style={styles.nextActionSubtitle}>{nextAction.subtitle}</Text>
-              </View>
-              <Text style={styles.nextActionArrow}>→</Text>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
-
         {/* Pillars Overview */}
         <View style={styles.pillarsSection}>
           <Text style={styles.pillarsTitle}>Today's Plan</Text>
