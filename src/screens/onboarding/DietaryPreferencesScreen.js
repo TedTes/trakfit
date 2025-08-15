@@ -141,11 +141,8 @@ export default function DietaryPreferencesScreen({ navigation }) {
       // Move to next onboarding step
       setOnboardingStep(4);
       
-      Alert.alert(
-        'Dietary Preferences Saved!',
-        'Your dietary preferences have been saved. Ready for the final step?',
-        [{ text: 'Continue', onPress: () => console.log('Navigate to lifestyle assessment screen') }]
-      );
+      // Navigate to next screen directly
+      navigation.navigate('LifestyleAssessment');
     }
   };
 
