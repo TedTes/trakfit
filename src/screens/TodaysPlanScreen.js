@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { AICoachEngine } from '../engine/AICoachEngine';
 import { useUserProfileStore } from '../store/userProfileStore';
 import DailyHeader from '../components/DailyHeader';
+import ProfileCompletionDashboard from './ProfileCompletionDashboard';
 
 export default function TodaysPlanScreen() {
   const navigation = useNavigation();
   const [expandedPillars, setExpandedPillars] = useState({});
+  const [showProfileDashboard, setShowProfileDashboard] = useState(false);
   
   // Get user profile from store
   const userProfile = useUserProfileStore(state => state.profile);
@@ -137,12 +139,74 @@ export default function TodaysPlanScreen() {
 
   const status = getCompletionStatus();
 
+  // Calculate profile completion for AI power indicator
+  const getProfileCompletionPercentage = () => {
+    const weights = {
+      personal: { weight: 20, completed: !!(userProfile.personalProfile?.age && userProfile.personalProfile?.sex && userProfile.personalProfile?.height && userProfile.personalProfile?.weight) },
+      goals: { weight: 25, completed: !!(userProfile.fitnessGoals?.primary && userProfile.fitnessGoals?.timeline) },
+      equipment: { weight: 20, completed: !!(userProfile.equipmentAvailability?.homeGym || userProfile.equipmentAvailability?.commercialGym || userProfile.equipmentAvailability?.noEquipment) },
+      diet: { weight: 20, completed: !!(userProfile.dietaryPreferences?.dietType) },
+      lifestyle: { weight: 15, completed: !!(userProfile.lifestyleAssessment?.sleepQuality && userProfile.lifestyleAssessment?.stressLevel) }
+    };
+
+    let totalWeight = 0;
+    let completedWeight = 0;
+
+    Object.values(weights).forEach(section => {
+      totalWeight += section.weight;
+      if (section.completed) {
+        completedWeight += section.weight;
+      }
+    });
+
+    return Math.round((completedWeight / totalWeight) * 100);
+  };
+
+  const profileCompletion = getProfileCompletionPercentage();
+
+  const getAIPowerLevel = () => {
+    if (profileCompletion >= 90) return { level: "Maximum", color: "#22c55e", description: "🚀 Full AI coaching power!" };
+    if (profileCompletion >= 70) return { level: "Advanced", color: "#6366f1", description: "🎯 Advanced personalization" };
+    if (profileCompletion >= 50) return { level: "Intermediate", color: "#f59e0b", description: "⚡ Good personalization" };
+    if (profileCompletion >= 25) return { level: "Basic", color: "#ef4444", description: "🔄 Basic recommendations" };
+    return { level: "Minimal", color: "#94a3b8", description: "📍 Complete profile for better AI" };
+  };
+
+  const aiPower = getAIPowerLevel();
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* Daily Header */}
         <DailyHeader />
+
+        {/* AI Power Level Indicator */}
+        {profileCompletion < 100 && (
+          <TouchableOpacity 
+            style={styles.aiPowerCard}
+            onPress={() => setShowProfileDashboard(true)}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[aiPower.color, aiPower.color + '90']}
+              style={styles.aiPowerGradient}
+            >
+              <View style={styles.aiPowerContent}>
+                <View style={styles.aiPowerLeft}>
+                  <Text style={styles.aiPowerTitle}>🤖 AI Power: {profileCompletion}%</Text>
+                  <Text style={styles.aiPowerDescription}>{aiPower.description}</Text>
+                  <Text style={styles.aiPowerSubtext}>
+                    Tap to complete profile for better recommendations
+                  </Text>
+                </View>
+                <View style={styles.aiPowerCircle}>
+                  <Text style={styles.aiPowerPercentage}>{profileCompletion}%</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
         {/* Daily Progress Overview */}
         <View style={styles.progressCard}>
@@ -400,6 +464,28 @@ export default function TodaysPlanScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Profile Completion Modal */}
+      <Modal
+        visible={showProfileDashboard}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowProfileDashboard(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity 
+              style={styles.modalCloseButton}
+              onPress={() => setShowProfileDashboard(false)}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Complete Your Profile</Text>
+            <View style={styles.modalSpacer} />
+          </View>
+          <ProfileCompletionDashboard onClose={() => setShowProfileDashboard(false)} />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
