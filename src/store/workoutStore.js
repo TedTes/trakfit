@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import WorkoutGenerator from '../utils/WorkoutGenerator';
 import { exerciseDatabase } from '../data/exerciseDatabase';
 import { mealDatabase } from '../data/mealDatabase';
-
+import { AICoachEngine } from '../engine/AICoachEngine';
+import { useUserProfileStore } from './userProfileStore';
 
   const workoutTracking = {
     isWorkoutActive: false,
@@ -210,11 +211,10 @@ export const useWorkoutStore = create((set, get) => ({
     console.log('Formatted workout:', formattedWorkout);
     set({ currentWorkout: formattedWorkout });
   },
-  generateNewWorkout: () => {
-    const state = get();
-    const generatedWorkout = state.generator.generateWorkout(state.userPreferences);
-    console.log('AI Generated workout:', generatedWorkout);
-    return generatedWorkout;
+  generateAIWorkout: () => {
+    const profile = useUserProfileStore.getState().profile;
+    const aiEngine = new AICoachEngine(profile);
+    return aiEngine.generateWorkoutPlan();
   },
   formatWorkoutForDisplay: (aiWorkout) => {
     return {
