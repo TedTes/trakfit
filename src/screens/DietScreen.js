@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,104 +9,169 @@ import {
   Alert 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import {useWorkoutStore} from "../store/workoutStore";
+import { useUserProfileStore } from '../store/userProfileStore';
+import { AICoachEngine } from '../engine/AICoachEngine';
+
 export default function DietScreen() {
-  const { userPreferences, generateMealPlan, updateUserPreferences } = useWorkoutStore();
-  const [mealPlan, setMealPlan] = useState(null);
-  const [selectedStore, setSelectedStore] = useState(userPreferences.preferredStore || 'walmart');
+  const { profile, updateDietaryPreferences } = useUserProfileStore();
+  const [nutritionPlan, setNutritionPlan] = useState(null);
+  const [selectedStore, setSelectedStore] = useState(profile.dietaryPreferences?.preferredStore || 'walmart');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    // Generate initial meal plan
-    const plan = generateMealPlan();
-    setMealPlan(plan);
+    generateAINutritionPlan();
   }, []);
+
+  const generateAINutritionPlan = async () => {
+    setIsGenerating(true);
+    try {
+      const aiEngine = new AICoachEngine(profile);
+      const plan = aiEngine.generateNutritionPlan();
+      setNutritionPlan(plan);
+    } catch (error) {
+      console.log('AI nutrition generation error:', error);
+      // Fallback to ensure UI still works
+      setNutritionPlan({
+        title: "Basic Nutrition Plan",
+        macros: { protein: 120, carbs: 200, fats: 65, calories: 1800 },
+        meals: [
+          { type: "breakfast", name: "Oatmeal with Berries", cost: 3.50, protein: 15, carbs: 45 },
+          { type: "lunch", name: "Chicken Salad", cost: 8.00, protein: 35, carbs: 20 },
+          { type: "dinner", name: "Salmon & Vegetables", cost: 12.00, protein: 40, carbs: 25 }
+        ],
+        budget: { used: 85, total: 150 },
+        tip: "Stay hydrated throughout the day!"
+      });
+    }
+    setIsGenerating(false);
+  };
 
   const handleStoreSelect = (store) => {
     setSelectedStore(store);
-    updateUserPreferences({ preferredStore: store });
+    updateDietaryPreferences({ preferredStore: store });
+    
+    // Regenerate plan with new store preferences
+    setTimeout(() => {
+      generateAINutritionPlan();
+    }, 100);
   };
 
   const handleGenerateNewMeals = () => {
-    const newPlan = generateMealPlan();
-    setMealPlan(newPlan);
+    Alert.alert(
+      'Generate New Plan?',
+      'This will create a new AI-powered nutrition plan based on your current profile and goals.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Generate', onPress: generateAINutritionPlan }
+      ]
+    );
   };
 
   const handleBudgetChange = (newBudget) => {
-    updateUserPreferences({ weeklyBudget: newBudget });
-    // Regenerate meal plan with new budget
+    updateDietaryPreferences({ weeklyBudget: newBudget });
+    
+    // Update profile and regenerate with new budget
     setTimeout(() => {
-      const newPlan = generateMealPlan();
-      setMealPlan(newPlan);
+      generateAINutritionPlan();
     }, 100);
   };
+
+  const handleGoalAdjustment = (newGoal) => {
+    // Update fitness goal which affects nutrition planning
+    useUserProfileStore.getState().updateFitnessGoals({ primary: newGoal });
+    
+    Alert.alert(
+      'Goal Updated!',
+      `Your nutrition plan will be regenerated for ${newGoal} focus.`,
+      [{ text: 'OK', onPress: generateAINutritionPlan }]
+    );
+  };
+
+  if (!nutritionPlan) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>🧠 AI is generating your personalized nutrition plan...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
-        {/* Budget Section */}
+        {/* AI-Powered Header */}
         <LinearGradient
           colors={['#22c55e', '#16a34a']}
-          style={styles.budgetSection}
+          style={styles.aiHeader}
         >
-          <View style={styles.budgetHeader}>
-            <View>
-              <Text style={styles.budgetAmount}>${userPreferences.weeklyBudget}</Text>
-              <Text style={styles.budgetPeriod}>Weekly Budget</Text>
-            </View>
-            <Text style={styles.budgetIcon}>🛒</Text>
+          <View style={styles.headerContent}>
+            <Text style={styles.aiTitle}>🤖 AI Nutrition Coach</Text>
+            <Text style={styles.aiSubtitle}>{nutritionPlan.title}</Text>
+            {nutritionPlan.subtitle && (
+              <Text style={styles.aiDetails}>{nutritionPlan.subtitle}</Text>
+            )}
           </View>
-          
-          {mealPlan && (
-            <View style={styles.budgetSummary}>
-              <Text style={styles.budgetUsed}>
-                Used: ${mealPlan.totalCost} • Remaining: ${mealPlan.remaining}
-              </Text>
-            </View>
-          )}
         </LinearGradient>
 
-        {/* Budget Adjustment */}
-        <View style={styles.budgetControls}>
-          <Text style={styles.controlsTitle}>Adjust Weekly Budget</Text>
-          <View style={styles.budgetOptions}>
-            {[100, 150, 200, 250].map(budget => (
-              <TouchableOpacity
-                key={budget}
-                style={[
-                  styles.budgetOption,
-                  userPreferences.weeklyBudget === budget && styles.selectedBudgetOption
-                ]}
-                onPress={() => handleBudgetChange(budget)}
-              >
-                <Text style={[
-                  styles.budgetOptionText,
-                  userPreferences.weeklyBudget === budget && styles.selectedBudgetText
-                ]}>
-                  ${budget}
+        {/* Intelligent Macro Targets */}
+        {nutritionPlan.macros && (
+          <View style={styles.macroSection}>
+            <Text style={styles.sectionTitle}>🎯 AI-Calculated Targets</Text>
+            <Text style={styles.sectionSubtitle}>
+              Based on your {profile.personalProfile.age}yr old {profile.personalProfile.sex}, 
+              {profile.personalProfile.weight}kg, {profile.fitnessGoals.primary} goal
+            </Text>
+            
+            <View style={styles.macroGrid}>
+              <View style={styles.macroCard}>
+                <Text style={[styles.macroValue, { color: '#22c55e' }]}>
+                  {nutritionPlan.macros.protein}g
                 </Text>
-              </TouchableOpacity>
-            ))}
+                <Text style={styles.macroLabel}>Protein</Text>
+              </View>
+              <View style={styles.macroCard}>
+                <Text style={[styles.macroValue, { color: '#3b82f6' }]}>
+                  {nutritionPlan.macros.carbs}g
+                </Text>
+                <Text style={styles.macroLabel}>Carbs</Text>
+              </View>
+              <View style={styles.macroCard}>
+                <Text style={[styles.macroValue, { color: '#f59e0b' }]}>
+                  {nutritionPlan.macros.fats}g
+                </Text>
+                <Text style={styles.macroLabel}>Fats</Text>
+              </View>
+              <View style={styles.macroCard}>
+                <Text style={styles.macroValue}>
+                  {nutritionPlan.macros.calories}
+                </Text>
+                <Text style={styles.macroLabel}>Calories</Text>
+              </View>
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* Store Selector - keep your existing code but update the state */}
+        {/* Store Selection */}
         <View style={styles.storeSelector}>
-          <Text style={styles.storeTitle}>Select Your Store</Text>
+          <Text style={styles.storeTitle}>🛒 Preferred Store</Text>
           <View style={styles.storeOptions}>
             <TouchableOpacity 
               style={[styles.storeOption, selectedStore === 'walmart' && styles.storeSelected]}
               onPress={() => handleStoreSelect('walmart')}
             >
-              <Text style={styles.storeIcon}>🏪</Text>
+              <Text style={styles.storeIcon}>🛍️</Text>
               <Text style={styles.storeLabel}>Walmart</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity 
-              style={[styles.storeOption, selectedStore === 'target' && styles.storeSelected]}
-              onPress={() => handleStoreSelect('target')}
+              style={[styles.storeOption, selectedStore === 'costco' && styles.storeSelected]}
+              onPress={() => handleStoreSelect('costco')}
             >
-              <Text style={styles.storeIcon}>🎯</Text>
-              <Text style={styles.storeLabel}>Target</Text>
+              <Text style={styles.storeIcon}>📦</Text>
+              <Text style={styles.storeLabel}>Costco</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity 
               style={[styles.storeOption, selectedStore === 'kroger' && styles.storeSelected]}
               onPress={() => handleStoreSelect('kroger')}
@@ -117,40 +182,92 @@ export default function DietScreen() {
           </View>
         </View>
 
-        {/* Meal Plan */}
-        {mealPlan && (
-          <View style={styles.mealPlan}>
-            <View style={styles.mealPlanHeader}>
-              <Text style={styles.mealPlanTitle}>This Week's Meals</Text>
-              <TouchableOpacity 
-                style={styles.generateButton}
-                onPress={handleGenerateNewMeals}
-              >
-                <Text style={styles.generateButtonText}>Generate New</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {mealPlan.weeklyMeals.slice(0, 1)[0]?.meals.map((meal, index) => (
-              <TouchableOpacity 
-                key={index}
-                style={styles.mealItem}
-                onPress={() => console.log('Meal details:', meal)}
-              >
+        {/* AI Generated Meal Plan */}
+        <View style={styles.mealPlan}>
+          <View style={styles.mealPlanHeader}>
+            <Text style={styles.mealPlanTitle}>🍽️ AI Meal Plan</Text>
+            <TouchableOpacity 
+              style={styles.generateButton}
+              onPress={handleGenerateNewMeals}
+              disabled={isGenerating}
+            >
+              <Text style={styles.generateButtonText}>
+                {isGenerating ? '🤖 Generating...' : '✨ Regenerate'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {nutritionPlan.meals?.map((meal, index) => (
+            <TouchableOpacity 
+              key={index}
+              style={styles.mealItem}
+              onPress={() => Alert.alert(
+                meal.name,
+                `${meal.type.charAt(0).toUpperCase() + meal.type.slice(1)}\n\n` +
+                `Protein: ${meal.protein}g\nCarbs: ${meal.carbs}g\nFats: ${meal.fats || 'N/A'}g\n\n` +
+                `Cost: $${meal.cost}`
+              )}
+            >
+              <View>
                 <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealPrice}>${meal.baseCost}</Text>
-              </TouchableOpacity>
-            ))}
-            
+                <Text style={styles.mealType}>{meal.type}</Text>
+                <Text style={styles.mealMacros}>
+                  P: {meal.protein}g • C: {meal.carbs}g
+                </Text>
+              </View>
+              <Text style={styles.mealPrice}>${meal.cost}</Text>
+            </TouchableOpacity>
+          ))}
+          
+          {nutritionPlan.budget && (
             <View style={styles.totalSection}>
               <Text style={styles.totalText}>
-                Weekly Total: ${mealPlan.totalCost} / ${mealPlan.budget}
+                Weekly Total: ${nutritionPlan.budget.used} / ${nutritionPlan.budget.total}
               </Text>
-              <Text style={styles.dailyAverage}>
-                Daily Average: ${mealPlan.dailyAverage}
-              </Text>
+              <View style={styles.budgetBar}>
+                <View 
+                  style={[
+                    styles.budgetProgress, 
+                    { width: `${(nutritionPlan.budget.used / nutritionPlan.budget.total) * 100}%` }
+                  ]} 
+                />
+              </View>
             </View>
+          )}
+        </View>
+
+        {/* AI Tips */}
+        {nutritionPlan.tip && (
+          <View style={styles.aiTipSection}>
+            <Text style={styles.aiTipTitle}>💡 AI Coach Tip</Text>
+            <Text style={styles.aiTipText}>{nutritionPlan.tip}</Text>
           </View>
         )}
+
+        {/* Quick Goal Adjustments */}
+        <View style={styles.goalAdjustments}>
+          <Text style={styles.goalTitle}>🎯 Quick Goal Adjustments</Text>
+          <View style={styles.goalButtons}>
+            <TouchableOpacity 
+              style={styles.goalButton}
+              onPress={() => handleGoalAdjustment('fat_loss')}
+            >
+              <Text style={styles.goalButtonText}>🔥 Fat Loss</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.goalButton}
+              onPress={() => handleGoalAdjustment('strength')}
+            >
+              <Text style={styles.goalButtonText}>💪 Strength</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.goalButton}
+              onPress={() => handleGoalAdjustment('endurance')}
+            >
+              <Text style={styles.goalButtonText}>🏃 Endurance</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -161,37 +278,94 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
     padding: 20,
   },
-  budgetSection: {
+  aiHeader: {
     padding: 24,
     borderRadius: 16,
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  budgetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerContent: {
     alignItems: 'center',
   },
-  budgetAmount: {
+  aiTitle: {
     color: 'white',
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
-  budgetPeriod: {
+  aiSubtitle: {
     color: 'rgba(255,255,255,0.9)',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  aiDetails: {
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
   },
-  budgetIcon: {
-    fontSize: 32,
+  macroSection: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 16,
+  },
+  macroGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  macroCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  macroValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  macroLabel: {
+    fontSize: 12,
+    color: '#64748b',
   },
   storeSelector: {
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -235,6 +409,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -276,6 +451,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#1e293b',
   },
+  mealType: {
+    fontSize: 12,
+    color: '#6366f1',
+    textTransform: 'capitalize',
+    marginTop: 2,
+  },
+  mealMacros: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
   mealPrice: {
     fontSize: 16,
     fontWeight: '600',
@@ -286,81 +472,74 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    alignItems: 'center',
   },
   totalText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#22c55e',
-    marginBottom: 16,
-  },
-  shoppingListButton: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  shoppingListButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  budgetSummary: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.3)',
-  },
-  budgetUsed: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  budgetControls: {
+  budgetBar: {
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  budgetProgress: {
+    height: '100%',
+    backgroundColor: '#22c55e',
+  },
+  aiTipSection: {
+    backgroundColor: '#ecfdf5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  aiTipTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#166534',
+    marginBottom: 8,
+  },
+  aiTipText: {
+    fontSize: 14,
+    color: '#166534',
+    lineHeight: 20,
+  },
+  goalAdjustments: {
     backgroundColor: 'white',
+    borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
-  controlsTitle: {
+  goalTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  budgetOptions: {
+  goalButtons: {
     flexDirection: 'row',
     gap: 12,
   },
-  budgetOption: {
+  goalButton: {
     flex: 1,
     padding: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
   },
-  selectedBudgetOption: {
-    backgroundColor: '#22c55e',
-    borderColor: '#22c55e',
-  },
-  budgetOptionText: {
-    fontSize: 14,
+  goalButtonText: {
+    fontSize: 12,
+    color: '#6366f1',
     fontWeight: '600',
-    color: '#374151',
-  },
-  selectedBudgetText: {
-    color: 'white',
-  },
-  dailyAverage: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 4,
   },
 });
