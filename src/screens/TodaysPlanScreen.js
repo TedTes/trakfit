@@ -5,12 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import { AICoachEngine } from '../engine/AICoachEngine';
 import { useUserProfileStore } from '../store/userProfileStore';
 import DailyHeader from '../components/DailyHeader';
-import ProfileCompletionDashboard from './ProfileCompletionDashboard';
+
 
 export default function TodaysPlanScreen() {
   const navigation = useNavigation();
   const [expandedPillars, setExpandedPillars] = useState({});
-  const [showProfileDashboard, setShowProfileDashboard] = useState(false);
+
   
   // Get user profile from store
   const userProfile = useUserProfileStore(state => state.profile);
@@ -360,28 +360,7 @@ export default function TodaysPlanScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Profile Completion Modal */}
-      <Modal
-        visible={showProfileDashboard}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowProfileDashboard(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity 
-              style={styles.modalCloseButton}
-              onPress={() => setShowProfileDashboard(false)}
-            >
-              <Text style={styles.modalCloseText}>✕</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Complete Your Profile</Text>
-            <View style={styles.modalSpacer} />
-          </View>
-          <ProfileCompletionDashboard onClose={() => setShowProfileDashboard(false)} />
-        </SafeAreaView>
-      </Modal>
+  
     </SafeAreaView>
   );
 }
