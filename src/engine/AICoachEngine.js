@@ -1,4 +1,4 @@
-class AICoachEngine {
+export class AICoachEngine {
     constructor(userProfile) {
       this.userProfile = userProfile;
     }
