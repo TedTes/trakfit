@@ -6,8 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 // Import screens aligned with User Journey Model
 import TodaysPlanScreen from './src/screens/TodaysPlanScreen';
 import WorkoutScreen from './src/screens/WorkoutScreen';
+import DietScreen from './src/screens/DietScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
-import AnalyzeScreen from './src/screens/AnalyzeScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -23,8 +23,8 @@ export default function App() {
               iconName = focused ? 'today' : 'today-outline';
             } else if (route.name === 'Execute') {
               iconName = focused ? 'fitness' : 'fitness-outline';
-            } else if (route.name === 'Analyze') {
-              iconName = focused ? 'camera' : 'camera-outline';
+            } else if (route.name === 'Nutrition') {
+              iconName = focused ? 'restaurant' : 'restaurant-outline';
             } else if (route.name === 'Profile') {
               iconName = focused ? 'person' : 'person-outline';
             }
@@ -67,12 +67,12 @@ export default function App() {
           }}
         />
         
-        {/* ANALYZE: Photo analysis for AI improvements */}
+        {/* NUTRITION: AI-powered nutrition planning */}
         <Tab.Screen 
-          name="Analyze" 
-          component={AnalyzeScreen}
+          name="Nutrition" 
+          component={DietScreen}
           options={{
-            title: "Analyze"
+            title: "Nutrition"
           }}
         />
         
