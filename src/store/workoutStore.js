@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { AICoachEngine } from '../engine/AICoachEngine';
 import { useUserProfileStore } from './userProfileStore';
 import { workoutPersistConfig } from '../utils/persistence';
+import { useLogStore } from './logStore';
 
 export const useWorkoutStore = create(
   persist(
@@ -135,7 +136,7 @@ export const useWorkoutStore = create(
         const state = get();
         const endTime = Date.now();
         const duration = endTime - (state.startTime || endTime);
-
+      
         const completedWorkout = {
           id: `workout_${endTime}`,
           date: new Date().toISOString(),
@@ -151,7 +152,10 @@ export const useWorkoutStore = create(
             (total, sets) => total + Object.keys(sets).length, 0
           )
         };
-
+      
+        // NEW: Log workout session to logStore
+        useLogStore.getState().logWorkoutSession(completedWorkout);
+      
         set((state) => ({
           isWorkoutActive: false,
           workoutHistory: [...state.workoutHistory, completedWorkout],
@@ -159,7 +163,7 @@ export const useWorkoutStore = create(
           currentExerciseIndex: 0,
           startTime: null
         }));
-
+      
         return completedWorkout;
       },
 
