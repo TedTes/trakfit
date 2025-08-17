@@ -36,7 +36,7 @@ export const workoutPersistConfig = {
   }),
 };
 
-// Persistence configuration for logs store (will be created in micro-commit 1.4)
+// Persistence configuration for logs store
 export const logsPersistConfig = {
   name: STORAGE_KEYS.LOGS,
   storage: persistentStorage,
