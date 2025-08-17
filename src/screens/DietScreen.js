@@ -18,17 +18,26 @@ export default function DietScreen() {
   const [nutritionPlan, setNutritionPlan] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { logMeal, markMealAsEaten } = useLogStore();
-
+  const [completedMeals, setCompletedMeals] = useState({});
 
   useEffect(() => {
     generateAINutritionPlan();
   }, []);
 
-  const handleMarkMealAsEaten = (mealIndex, meal, portionMultiplier = 1) => {
-    // Log the meal to logStore with actual macro data
-    markMealAsEaten(mealIndex, portionMultiplier);
+  const toggleMealCompletion = (mealIndex, meal) => {
+    const isCompleted = !completedMeals[mealIndex];
     
-    console.log(`Meal marked as eaten: ${meal.name} (${portionMultiplier}x portion)`);
+    // Update local state
+    setCompletedMeals(prev => ({
+      ...prev,
+      [mealIndex]: isCompleted
+    }));
+    
+    if (isCompleted) {
+      // Log the meal to logStore when marked as eaten
+      markMealAsEaten(mealIndex, 1);
+      console.log(`Meal completed: ${meal.name}`);
+    }
   };
 
   const generateAINutritionPlan = async () => {
@@ -148,36 +157,40 @@ export default function DietScreen() {
             </TouchableOpacity>
           </View>
           
-          {nutritionPlan.meals?.map((meal, index) => (
-            <>
-                        <TouchableOpacity 
-              key={index}
-              style={styles.mealItem}
-              onPress={() => Alert.alert(
-                meal.name,
-                `${meal.type.charAt(0).toUpperCase() + meal.type.slice(1)}\n\n` +
-                `Protein: ${meal.protein}g\nCarbs: ${meal.carbs}g\nFats: ${meal.fats || 'N/A'}g\n\n`
-            
-              )}
-            >
-              <View>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealType}>{meal.type}</Text>
-                <Text style={styles.mealMacros}>
-                  P: {meal.protein}g • C: {meal.carbs}g
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-  style={styles.markEatenButton}
-  onPress={() => handleMarkMealAsEaten(index, meal, 1)}
->
-  <Text style={styles.markEatenText}>Mark as Eaten</Text>
-</TouchableOpacity>
-            </>
-
-            
-          ))}
+          {nutritionPlan.meals?.map((meal, index) => {
+  const isCompleted = completedMeals[index] || false;
+  
+  return (
+    <View key={index} style={styles.mealItemContainer}>
+      <TouchableOpacity 
+        style={styles.mealItem}
+        onPress={() => Alert.alert(
+          meal.name,
+          `${meal.type.charAt(0).toUpperCase() + meal.type.slice(1)}\n\n` +
+          `Protein: ${meal.protein}g\nCarbs: ${meal.carbs}g\nFats: ${meal.fats || 'N/A'}g`
+        )}
+      >
+        <View style={styles.mealInfo}>
+          <Text style={styles.mealName}>{meal.name}</Text>
+          <Text style={styles.mealType}>{meal.type}</Text>
+          <Text style={styles.mealMacros}>
+            P: {meal.protein}g • C: {meal.carbs}g
+          </Text>
+        </View>
+        
+        {/* NEW: Completion Checkbox */}
+        <TouchableOpacity
+          style={[styles.checkbox, isCompleted && styles.checkboxCompleted]}
+          onPress={() => toggleMealCompletion(index, meal)}
+        >
+          <Text style={[styles.checkboxText, isCompleted && styles.checkboxTextCompleted]}>
+            {isCompleted ? '✅' : '○'}
+          </Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
+  );
+})}
           
         </View>
       </ScrollView>
@@ -344,5 +357,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
-  }
+  },
+  mealItemContainer: {
+    marginBottom: 8,
+  },
+  mealInfo: {
+    flex: 1,
+  },
+  checkbox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  checkboxCompleted: {
+    backgroundColor: '#f0f9ff',
+    borderColor: '#22c55e',
+  },
+  checkboxText: {
+    fontSize: 16,
+    color: '#94a3b8',
+  },
+  checkboxTextCompleted: {
+    fontSize: 16,
+    color: '#22c55e',
+  },
 });
