@@ -47,6 +47,74 @@ export const useLogStore = create(
         return get().getWorkoutForDate();
       },
 
+      unmarkMealAsEaten: (mealIndex, date = null) => {
+        const dateKey = date ? getDateKey(date) : getTodayKey();
+        const currentMealLog = get().mealsByDate[dateKey] || {
+          date: dateKey,
+          meals: [],
+          totalMacros: { protein: 0, carbs: 0, fats: 0, calories: 0 }
+        };
+      
+        if (!currentMealLog.meals[mealIndex]) {
+          console.error('Meal not found at index:', mealIndex);
+          return;
+        }
+      
+        const updatedMeals = currentMealLog.meals.map((meal, index) => {
+          if (index === mealIndex) {
+            return {
+              ...meal,
+              eaten: false,
+              eatenAt: null,
+              portionMultiplier: 1,
+              actualMacros: null
+            };
+          }
+          return meal;
+        });
+      
+        // Recalculate total macros based on eaten meals only
+        const totalMacros = updatedMeals
+          .filter(meal => meal.eaten)
+          .reduce((total, meal) => {
+            const macros = meal.actualMacros || meal;
+            return {
+              protein: total.protein + (macros.protein || 0),
+              carbs: total.carbs + (macros.carbs || 0),
+              fats: total.fats + (macros.fats || 0),
+              calories: total.calories + (macros.calories || 0)
+            };
+          }, { protein: 0, carbs: 0, fats: 0, calories: 0 });
+      
+        set((state) => ({
+          mealsByDate: {
+            ...state.mealsByDate,
+            [dateKey]: {
+              ...currentMealLog,
+              meals: updatedMeals,
+              totalMacros,
+              lastUpdated: new Date().toISOString()
+            }
+          }
+        }));
+      },
+      
+      clearTodaysMeals: (date = null) => {
+        const dateKey = date ? getDateKey(date) : getTodayKey();
+        
+        set((state) => ({
+          mealsByDate: {
+            ...state.mealsByDate,
+            [dateKey]: {
+              date: dateKey,
+              meals: [],
+              totalMacros: { protein: 0, carbs: 0, fats: 0, calories: 0 },
+              lastUpdated: new Date().toISOString()
+            }
+          }
+        }));
+      },
+
       // === MEAL LOGGING ===
       
       logMeal: (mealData, date = null) => {
