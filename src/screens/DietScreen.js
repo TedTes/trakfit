@@ -13,12 +13,14 @@ import { useUserProfileStore } from '../store/userProfileStore';
 import { AICoachEngine } from '../engine/AICoachEngine';
 import { useLogStore } from '../store/logStore';
 
+
 export default function DietScreen() {
   const { profile} = useUserProfileStore();
   const [nutritionPlan, setNutritionPlan] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { logMeal, markMealAsEaten } = useLogStore();
   const [completedMeals, setCompletedMeals] = useState({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     generateAINutritionPlan();
@@ -47,38 +49,31 @@ export default function DietScreen() {
     }
   }, [nutritionPlan]);
 
+  const getConsumedMacros = () => {
+    const { getTodaysMeals } = useLogStore.getState();
+    const todaysMeals = getTodaysMeals();
+    return todaysMeals?.totalMacros || { protein: 0, carbs: 0, fats: 0, calories: 0 };
+  };
   const toggleMealCompletion = (mealIndex, meal) => {
     const isCompleted = !completedMeals[mealIndex];
     
-    // Update local state
     setCompletedMeals(prev => ({
       ...prev,
       [mealIndex]: isCompleted
     }));
     
     if (isCompleted) {
-      // Mark meal as eaten in logStore
       markMealAsEaten(mealIndex, 1);
       console.log(`Meal completed: ${meal.name}`);
       
-      // Force component re-render to update progress bars
+      // Force re-render of progress bars
       setTimeout(() => {
-        setCompletedMeals(prev => ({ ...prev }));
+        setRefreshTrigger(prev => prev + 1);
       }, 100);
     }
   };
 
-  const getConsumedMacros = () => {
-    const { getTodaysMeals } = useLogStore.getState();
-    const todaysMeals = getTodaysMeals();
-    
-    if (!todaysMeals) {
-      return { protein: 0, carbs: 0, fats: 0, calories: 0 };
-    }
-    
-    return todaysMeals.totalMacros || { protein: 0, carbs: 0, fats: 0, calories: 0 };
-  };
-
+  const consumedMacros = getConsumedMacros();
   const MacroProgressBar = ({ label, consumed, target, color }) => {
     const percentage = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
     
@@ -177,65 +172,37 @@ export default function DietScreen() {
     
     {/* Real-time Progress Bars */}
     <View style={styles.macroProgressContainer}>
-      <MacroProgressBar 
-        label="Protein"
-        consumed={getConsumedMacros().protein}
-        target={nutritionPlan.macros.protein}
-        color="#22c55e"
-      />
-      <MacroProgressBar 
-        label="Carbs"
-        consumed={getConsumedMacros().carbs}
-        target={nutritionPlan.macros.carbs}
-        color="#3b82f6"
-      />
-      <MacroProgressBar 
-        label="Fats"
-        consumed={getConsumedMacros().fats}
-        target={nutritionPlan.macros.fats}
-        color="#f59e0b"
-      />
-      <MacroProgressBar 
-        label="Calories"
-        consumed={getConsumedMacros().calories}
-        target={nutritionPlan.macros.calories}
-        color="#8b5cf6"
-      />
-    </View>
-    
-    {/* Static Target Cards (keep for reference) */}
-    <Text style={styles.targetsLabel}>Target Breakdown:</Text>
-    <View style={styles.macroGrid}>
-      <View style={styles.macroCard}>
-        <Text style={[styles.macroValue, { color: '#22c55e' }]}>
-          {nutritionPlan.macros.protein}g
-        </Text>
-        <Text style={styles.macroLabel}>Protein</Text>
-      </View>
-      <View style={styles.macroCard}>
-        <Text style={[styles.macroValue, { color: '#3b82f6' }]}>
-          {nutritionPlan.macros.carbs}g
-        </Text>
-        <Text style={styles.macroLabel}>Carbs</Text>
-      </View>
-      <View style={styles.macroCard}>
-        <Text style={[styles.macroValue, { color: '#f59e0b' }]}>
-          {nutritionPlan.macros.fats}g
-        </Text>
-        <Text style={styles.macroLabel}>Fats</Text>
-      </View>
-      <View style={styles.macroCard}>
-        <Text style={styles.macroValue}>
-          {nutritionPlan.macros.calories}
-        </Text>
-        <Text style={styles.macroLabel}>Calories</Text>
-      </View>
+    <MacroProgressBar 
+  label="Protein"
+  consumed={consumedMacros.protein}
+  target={nutritionPlan.macros.protein}
+  color="#22c55e"
+  key={`protein-${refreshTrigger}`}
+/>
+<MacroProgressBar 
+  label="Carbs"
+  consumed={consumedMacros.carbs}
+  target={nutritionPlan.macros.carbs}
+  color="#3b82f6"
+  key={`carbs-${refreshTrigger}`}
+/>
+<MacroProgressBar 
+  label="Fats"
+  consumed={consumedMacros.fats}
+  target={nutritionPlan.macros.fats}
+  color="#f59e0b"
+  key={`fats-${refreshTrigger}`}
+/>
+<MacroProgressBar 
+  label="Calories"
+  consumed={consumedMacros.calories}
+  target={nutritionPlan.macros.calories}
+  color="#8b5cf6"
+  key={`calories-${refreshTrigger}`}
+/>
     </View>
   </View>
 )}
-
-
-
         {/* AI Generated Meal Plan */}
         <View style={styles.mealPlan}>
           <View style={styles.mealPlanHeader}>
