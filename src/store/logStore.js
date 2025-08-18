@@ -124,33 +124,37 @@ export const useLogStore = create(
           meals: [],
           totalMacros: { protein: 0, carbs: 0, fats: 0, calories: 0 }
         };
-
+      
         const updatedMeals = [...currentMealLog.meals, {
           ...mealData,
           loggedAt: new Date().toISOString()
         }];
-
-        // Recalculate total macros
-        const totalMacros = updatedMeals.reduce((total, meal) => ({
-          protein: total.protein + (meal.protein || 0),
-          carbs: total.carbs + (meal.carbs || 0),
-          fats: total.fats + (meal.fats || 0),
-          calories: total.calories + (meal.calories || 0)
-        }), { protein: 0, carbs: 0, fats: 0, calories: 0 });
-
+      
+        // Only count eaten meals for totalMacros (consumed progress)
+        const totalMacros = updatedMeals
+          .filter(meal => meal.eaten) 
+          .reduce((total, meal) => {
+            const macros = meal.actualMacros || meal;
+            return {
+              protein: total.protein + (macros.protein || 0),
+              carbs: total.carbs + (macros.carbs || 0),
+              fats: total.fats + (macros.fats || 0),
+              calories: total.calories + (macros.calories || 0)
+            };
+          }, { protein: 0, carbs: 0, fats: 0, calories: 0 });
+      
         set((state) => ({
           mealsByDate: {
             ...state.mealsByDate,
             [dateKey]: {
               date: dateKey,
               meals: updatedMeals,
-              totalMacros,
+              totalMacros, 
               lastUpdated: new Date().toISOString()
             }
           }
         }));
       },
-
       markMealAsEaten: (mealIndex, portionMultiplier = 1, date = null) => {
         const dateKey = date ? getDateKey(date) : getTodayKey();
         const currentMealLog = get().mealsByDate[dateKey] || {
