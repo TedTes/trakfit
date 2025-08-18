@@ -57,16 +57,54 @@ export default function DietScreen() {
     }));
     
     if (isCompleted) {
-      // Mark meal as eaten in logStore (this will update Today's Plan)
+      // Mark meal as eaten in logStore
       markMealAsEaten(mealIndex, 1);
       console.log(`Meal completed: ${meal.name}`);
-    } else {
-      // TODO : If unchecked, need to remove from logStore
-      // For now,  handle the positive case
-      console.log(`Meal unchecked: ${meal.name}`);
+      
+      // Force component re-render to update progress bars
+      setTimeout(() => {
+        setCompletedMeals(prev => ({ ...prev }));
+      }, 100);
     }
   };
 
+  const getConsumedMacros = () => {
+    const { getTodaysMeals } = useLogStore.getState();
+    const todaysMeals = getTodaysMeals();
+    
+    if (!todaysMeals) {
+      return { protein: 0, carbs: 0, fats: 0, calories: 0 };
+    }
+    
+    return todaysMeals.totalMacros || { protein: 0, carbs: 0, fats: 0, calories: 0 };
+  };
+
+  const MacroProgressBar = ({ label, consumed, target, color }) => {
+    const percentage = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
+    
+    return (
+      <View style={styles.macroProgressItem}>
+        <View style={styles.macroProgressHeader}>
+          <Text style={styles.macroProgressLabel}>{label}</Text>
+          <Text style={styles.macroProgressValues}>
+            {Math.round(consumed)}/{target}g
+          </Text>
+        </View>
+        <View style={styles.progressBarContainer}>
+          <View style={styles.progressBarBackground}>
+            <View 
+              style={[
+                styles.progressBarFill, 
+                { width: `${percentage}%`, backgroundColor: color }
+              ]} 
+            />
+          </View>
+          <Text style={styles.progressPercentage}>{Math.round(percentage)}%</Text>
+        </View>
+      </View>
+    );
+  };
+  
   const generateAINutritionPlan = async () => {
     setIsGenerating(true);
     try {
@@ -131,41 +169,70 @@ export default function DietScreen() {
 
         {/* Intelligent Macro Targets */}
         {nutritionPlan.macros && (
-          <View style={styles.macroSection}>
-            <Text style={styles.sectionTitle}>🎯 AI-Calculated Targets</Text>
-            <Text style={styles.sectionSubtitle}>
-              Based on your {profile.personalProfile.age}yr old {profile.personalProfile.sex}, 
-              {profile.personalProfile.weight}kg, {profile.fitnessGoals.primary} goal
-            </Text>
-            
-            <View style={styles.macroGrid}>
-              <View style={styles.macroCard}>
-                <Text style={[styles.macroValue, { color: '#22c55e' }]}>
-                  {nutritionPlan.macros.protein}g
-                </Text>
-                <Text style={styles.macroLabel}>Protein</Text>
-              </View>
-              <View style={styles.macroCard}>
-                <Text style={[styles.macroValue, { color: '#3b82f6' }]}>
-                  {nutritionPlan.macros.carbs}g
-                </Text>
-                <Text style={styles.macroLabel}>Carbs</Text>
-              </View>
-              <View style={styles.macroCard}>
-                <Text style={[styles.macroValue, { color: '#f59e0b' }]}>
-                  {nutritionPlan.macros.fats}g
-                </Text>
-                <Text style={styles.macroLabel}>Fats</Text>
-              </View>
-              <View style={styles.macroCard}>
-                <Text style={styles.macroValue}>
-                  {nutritionPlan.macros.calories}
-                </Text>
-                <Text style={styles.macroLabel}>Calories</Text>
-              </View>
-            </View>
-          </View>
-        )}
+  <View style={styles.macroSection}>
+    <Text style={styles.sectionTitle}>🎯 Daily Macro Progress</Text>
+    <Text style={styles.sectionSubtitle}>
+      Track your nutrition goals in real-time
+    </Text>
+    
+    {/* Real-time Progress Bars */}
+    <View style={styles.macroProgressContainer}>
+      <MacroProgressBar 
+        label="Protein"
+        consumed={getConsumedMacros().protein}
+        target={nutritionPlan.macros.protein}
+        color="#22c55e"
+      />
+      <MacroProgressBar 
+        label="Carbs"
+        consumed={getConsumedMacros().carbs}
+        target={nutritionPlan.macros.carbs}
+        color="#3b82f6"
+      />
+      <MacroProgressBar 
+        label="Fats"
+        consumed={getConsumedMacros().fats}
+        target={nutritionPlan.macros.fats}
+        color="#f59e0b"
+      />
+      <MacroProgressBar 
+        label="Calories"
+        consumed={getConsumedMacros().calories}
+        target={nutritionPlan.macros.calories}
+        color="#8b5cf6"
+      />
+    </View>
+    
+    {/* Static Target Cards (keep for reference) */}
+    <Text style={styles.targetsLabel}>Target Breakdown:</Text>
+    <View style={styles.macroGrid}>
+      <View style={styles.macroCard}>
+        <Text style={[styles.macroValue, { color: '#22c55e' }]}>
+          {nutritionPlan.macros.protein}g
+        </Text>
+        <Text style={styles.macroLabel}>Protein</Text>
+      </View>
+      <View style={styles.macroCard}>
+        <Text style={[styles.macroValue, { color: '#3b82f6' }]}>
+          {nutritionPlan.macros.carbs}g
+        </Text>
+        <Text style={styles.macroLabel}>Carbs</Text>
+      </View>
+      <View style={styles.macroCard}>
+        <Text style={[styles.macroValue, { color: '#f59e0b' }]}>
+          {nutritionPlan.macros.fats}g
+        </Text>
+        <Text style={styles.macroLabel}>Fats</Text>
+      </View>
+      <View style={styles.macroCard}>
+        <Text style={styles.macroValue}>
+          {nutritionPlan.macros.calories}
+        </Text>
+        <Text style={styles.macroLabel}>Calories</Text>
+      </View>
+    </View>
+  </View>
+)}
 
 
 
@@ -414,4 +481,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#22c55e',
   },
+  macroProgressContainer: {
+    marginBottom: 20,
+  },
+  macroProgressItem: {
+    marginBottom: 12,
+  },
+  macroProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  macroProgressLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  macroProgressValues: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressBarBackground: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressPercentage: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    minWidth: 35,
+    textAlign: 'right',
+  },
+  targetsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 8,
+  }
 });
