@@ -18,7 +18,9 @@ export default function DietScreen() {
   const { profile} = useUserProfileStore();
   const [nutritionPlan, setNutritionPlan] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const { logMeal, markMealAsEaten } = useLogStore();
+  
+  const { logMeal, markMealAsEaten, getTodaysMeals } = useLogStore();
+  
   const [completedMeals, setCompletedMeals] = useState({});
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -29,7 +31,6 @@ export default function DietScreen() {
   useEffect(() => {
     // Initialize today's meals in logStore when nutrition plan is generated
     if (nutritionPlan?.meals) {
-      const { getTodaysMeals, logMeal } = useLogStore.getState();
       
       // Only initialize if no meals exist for today
       if (!getTodaysMeals()) {
@@ -49,11 +50,9 @@ export default function DietScreen() {
     }
   }, [nutritionPlan]);
 
-  const getConsumedMacros = () => {
-    const { getTodaysMeals } = useLogStore.getState();
-    const todaysMeals = getTodaysMeals();
-    return todaysMeals?.totalMacros || { protein: 0, carbs: 0, fats: 0, calories: 0 };
-  };
+  const todaysMeals = getTodaysMeals();
+  const consumedMacros = todaysMeals?.totalMacros || { protein: 0, carbs: 0, fats: 0, calories: 0 };
+
   const toggleMealCompletion = (mealIndex, meal) => {
     const isCompleted = !completedMeals[mealIndex];
     
@@ -73,7 +72,6 @@ export default function DietScreen() {
     }
   };
 
-  const consumedMacros = getConsumedMacros();
   const MacroProgressBar = ({ label, consumed, target, color }) => {
     const percentage = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
     
@@ -113,9 +111,9 @@ export default function DietScreen() {
         title: "Basic Nutrition Plan",
         macros: { protein: 120, carbs: 200, fats: 65, calories: 1800 },
         meals: [
-          { type: "breakfast", name: "Oatmeal with Berries", protein: 15, carbs: 45 },
-          { type: "lunch", name: "Chicken Salad",  protein: 35, carbs: 20 },
-          { type: "dinner", name: "Salmon & Vegetables",  protein: 40, carbs: 25 }
+          { type: "breakfast", name: "Oatmeal with Berries", protein: 15, carbs: 45, fats: 5 },
+          { type: "lunch", name: "Chicken Salad", protein: 35, carbs: 20, fats: 15 },
+          { type: "dinner", name: "Salmon & Vegetables", protein: 40, carbs: 25, fats: 20 }
         ]
       });
     }
@@ -169,37 +167,31 @@ export default function DietScreen() {
     <Text style={styles.sectionSubtitle}>
       Track your nutrition goals in real-time
     </Text>
-    
-    {/* Real-time Progress Bars */}
     <View style={styles.macroProgressContainer}>
-    <MacroProgressBar 
-  label="Protein"
-  consumed={consumedMacros.protein}
-  target={nutritionPlan.macros.protein}
-  color="#22c55e"
-  key={`protein-${refreshTrigger}`}
-/>
-<MacroProgressBar 
-  label="Carbs"
-  consumed={consumedMacros.carbs}
-  target={nutritionPlan.macros.carbs}
-  color="#3b82f6"
-  key={`carbs-${refreshTrigger}`}
-/>
-<MacroProgressBar 
-  label="Fats"
-  consumed={consumedMacros.fats}
-  target={nutritionPlan.macros.fats}
-  color="#f59e0b"
-  key={`fats-${refreshTrigger}`}
-/>
-<MacroProgressBar 
-  label="Calories"
-  consumed={consumedMacros.calories}
-  target={nutritionPlan.macros.calories}
-  color="#8b5cf6"
-  key={`calories-${refreshTrigger}`}
-/>
+      <MacroProgressBar 
+        label="Protein"
+        consumed={consumedMacros.protein}
+        target={nutritionPlan.macros.protein}
+        color="#22c55e"
+      />
+      <MacroProgressBar 
+        label="Carbs"
+        consumed={consumedMacros.carbs}
+        target={nutritionPlan.macros.carbs}
+        color="#3b82f6"
+      />
+      <MacroProgressBar 
+        label="Fats"
+        consumed={consumedMacros.fats}
+        target={nutritionPlan.macros.fats}
+        color="#f59e0b"
+      />
+      <MacroProgressBar 
+        label="Calories"
+        consumed={consumedMacros.calories}
+        target={nutritionPlan.macros.calories}
+        color="#8b5cf6"
+      />
     </View>
   </View>
 )}
@@ -238,8 +230,7 @@ export default function DietScreen() {
             P: {meal.protein}g • C: {meal.carbs}g
           </Text>
         </View>
-        
-        {/* NEW: Completion Checkbox */}
+      
         <TouchableOpacity
           style={[styles.checkbox, isCompleted && styles.checkboxCompleted]}
           onPress={() => toggleMealCompletion(index, meal)}

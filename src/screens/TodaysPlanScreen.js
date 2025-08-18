@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { AICoachEngine } from '../engine/AICoachEngine';
 import { useUserProfileStore } from '../store/userProfileStore';
+import { useLogStore } from '../store/logStore'; // NEW: Import logStore
 import DailyHeader from '../components/DailyHeader';
-
 
 export default function TodaysPlanScreen() {
   const navigation = useNavigation();
   const [expandedPillars, setExpandedPillars] = useState({});
-
   
   // Get user profile from store
   const userProfile = useUserProfileStore(state => state.profile);
   
+  const {
+    getTodaysProgress,
+    getTodaysCompletionPercentage,
+    getTodaysWorkout,
+    getTodaysMeals,
+    getTodaysRecovery,
+    getTodaysHabits
+  } = useLogStore();
+
   // Generate today's plan using AI engine
   let todaysPlan = null;
   try {
@@ -72,18 +80,89 @@ export default function TodaysPlanScreen() {
   };
 
   const getCompletionStatus = () => {
+    // Get actual logged data
+    const loggedWorkout = getTodaysWorkout();
+    const loggedMeals = getTodaysMeals();
+    const loggedRecovery = getTodaysRecovery();
+    const loggedHabits = getTodaysHabits();
+
     let completed = 0;
     let total = 4;
 
-    if (todaysPlan?.workout?.completed) completed++;
-    if (todaysPlan?.nutrition?.meals?.every(meal => meal.completed)) completed++;
-    if (todaysPlan?.recovery?.recovery_score >= 80) completed++;
-    if (todaysPlan?.mindset?.habits?.every(habit => habit.completed)) completed++;
+    // Workout completion - check if workout session is logged and completed
+    if (loggedWorkout && loggedWorkout.endedAt) {
+      completed++;
+    }
 
-    return { completed, total, percentage: Math.round((completed / total) * 100) };
+    // Nutrition completion - check if any meals are marked as eaten
+    if (loggedMeals && loggedMeals.meals && loggedMeals.meals.some(meal => meal.eaten)) {
+      completed++;
+    }
+
+    // Recovery completion - check if sleep is logged
+    if (loggedRecovery && loggedRecovery.sleepHours) {
+      completed++;
+    }
+
+    // Mindset completion - check if any habits are completed
+    if (loggedHabits && loggedHabits.habits && 
+        Object.values(loggedHabits.habits).some(habit => habit.completed)) {
+      completed++;
+    }
+
+    return { 
+      completed, 
+      total, 
+      percentage: Math.round((completed / total) * 100) 
+    };
   };
 
+  const getPillarProgress = () => {
+    const loggedWorkout = getTodaysWorkout();
+    const loggedMeals = getTodaysMeals();
+    const loggedRecovery = getTodaysRecovery();
+    const loggedHabits = getTodaysHabits();
+
+    return {
+      workout: {
+        completed: !!(loggedWorkout && loggedWorkout.endedAt),
+        progress: loggedWorkout ? 
+          `${loggedWorkout.totalSets || 0} sets completed` : 
+          `${todaysPlan?.workout?.exercises?.length || 0} exercises planned`,
+        status: loggedWorkout?.endedAt ? 'complete' : 'pending'
+      },
+      nutrition: {
+        completed: !!(loggedMeals && loggedMeals.meals.some(meal => meal.eaten)),
+        progress: loggedMeals ? 
+          `${loggedMeals.meals.filter(meal => meal.eaten).length}/${loggedMeals.meals.length} meals eaten` :
+          `${todaysPlan?.nutrition?.meals?.length || 0} meals planned`,
+        macros: loggedMeals?.totalMacros || { protein: 0, carbs: 0, fats: 0, calories: 0 },
+        target: todaysPlan?.nutrition?.macros || { protein: 120, carbs: 200, fats: 65, calories: 1800 },
+        status: loggedMeals?.meals.some(meal => meal.eaten) ? 
+          (loggedMeals.meals.every(meal => meal.eaten) ? 'complete' : 'partial') : 'pending'
+      },
+      recovery: {
+        completed: !!(loggedRecovery && loggedRecovery.sleepHours),
+        progress: loggedRecovery ? 
+          `${loggedRecovery.sleepHours}h sleep, ${loggedRecovery.recoveryScore}/100 score` :
+          `${todaysPlan?.recovery?.sleep_target?.hours || 8}h sleep target`,
+        score: loggedRecovery?.recoveryScore || 0,
+        status: loggedRecovery?.sleepHours ? 'complete' : 'pending'
+      },
+      mindset: {
+        completed: !!(loggedHabits && Object.values(loggedHabits.habits || {}).some(habit => habit.completed)),
+        progress: loggedHabits ? 
+          `${Object.values(loggedHabits.habits || {}).filter(habit => habit.completed).length}/${Object.keys(loggedHabits.habits || {}).length} habits done` :
+          `${todaysPlan?.mindset?.habits?.length || 2} habits planned`,
+        habits: loggedHabits?.habits || {},
+        status: loggedHabits && Object.values(loggedHabits.habits || {}).some(habit => habit.completed) ? 'partial' : 'pending'
+      }
+    };
+  };
+
+  // Use real data instead of mock calculation
   const status = getCompletionStatus();
+  const pillarProgress = getPillarProgress();
 
   // Calculate profile completion for AI power indicator
   const getProfileCompletionPercentage = () => {
@@ -126,7 +205,8 @@ export default function TodaysPlanScreen() {
         
         {/* Daily Header */}
         <DailyHeader />
-        {/* Daily Progress Overview */}
+        
+        {/* Daily Progress Overview - NOW SHOWS REAL DATA */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <View>
@@ -144,7 +224,8 @@ export default function TodaysPlanScreen() {
             <View style={[styles.progressFill, { width: `${status.percentage}%` }]} />
           </View>
         </View>
-        {/* Pillars Overview */}
+
+        {/* Pillars Overview - NOW SHOWS REAL PROGRESS */}
         <View style={styles.pillarsSection}>
           <Text style={styles.pillarsTitle}>Today's Plan</Text>
           
@@ -159,11 +240,11 @@ export default function TodaysPlanScreen() {
                 <View style={styles.pillarTitleContainer}>
                   <Text style={styles.pillarTitle}>Workout</Text>
                   <Text style={styles.pillarSubtitle}>
-                    {todaysPlan?.workout?.title} • {todaysPlan?.workout?.exercises?.length} exercises
+                    {pillarProgress.workout.progress}
                   </Text>
                 </View>
                 <View style={styles.pillarStatus}>
-                  {todaysPlan?.workout?.completed ? (
+                  {pillarProgress.workout.completed ? (
                     <Text style={styles.statusCompleted}>✓</Text>
                   ) : (
                     <Text style={styles.statusPending}>○</Text>
@@ -197,7 +278,7 @@ export default function TodaysPlanScreen() {
                   onPress={() => navigation.navigate('Execute')}
                 >
                   <Text style={styles.pillarActionText}>
-                    {todaysPlan?.workout?.completed ? 'View Workout' : 'Start Workout'}
+                    {pillarProgress.workout.completed ? 'View Workout' : 'Start Workout'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -215,11 +296,11 @@ export default function TodaysPlanScreen() {
                 <View style={styles.pillarTitleContainer}>
                   <Text style={styles.pillarTitle}>Nutrition</Text>
                   <Text style={styles.pillarSubtitle}>
-                    {todaysPlan?.nutrition?.macros?.calories} cal • {todaysPlan?.nutrition?.macros?.protein}g protein
+                    {pillarProgress.nutrition.progress}
                   </Text>
                 </View>
                 <View style={styles.pillarStatus}>
-                  {todaysPlan?.nutrition?.meals?.every(meal => meal.completed) ? (
+                  {pillarProgress.nutrition.completed ? (
                     <Text style={styles.statusCompleted}>✓</Text>
                   ) : (
                     <Text style={styles.statusPending}>○</Text>
@@ -234,11 +315,28 @@ export default function TodaysPlanScreen() {
             {expandedPillars.nutrition && (
               <View style={styles.pillarContent}>
                 <View style={styles.nutritionPreview}>
-                  {todaysPlan?.nutrition?.meals?.map((meal, index) => (
+                  {/* Show real macro progress */}
+                  <View style={styles.macroProgress}>
+                    <Text style={styles.macroTitle}>Macro Progress</Text>
+                    <View style={styles.macroRow}>
+                      <Text style={styles.macroLabel}>Protein:</Text>
+                      <Text style={styles.macroValues}>
+                        {Math.round(pillarProgress.nutrition.macros.protein)}g / {pillarProgress.nutrition.target.protein}g
+                      </Text>
+                    </View>
+                    <View style={styles.macroRow}>
+                      <Text style={styles.macroLabel}>Calories:</Text>
+                      <Text style={styles.macroValues}>
+                        {Math.round(pillarProgress.nutrition.macros.calories)} / {pillarProgress.nutrition.target.calories}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {todaysPlan?.nutrition?.meals?.slice(0, 2).map((meal, index) => (
                     <View key={index} style={styles.mealItem}>
                       <Text style={styles.mealType}>{meal.type}</Text>
                       <Text style={styles.mealName}>{meal.name}</Text>
-                      <Text style={styles.mealMacros}>P: {meal.protein}g • C: {meal.carbs}g</Text>
+                      <Text style={styles.mealMacros}>{meal.protein}g protein • {meal.carbs}g carbs</Text>
                     </View>
                   ))}
                 </View>
@@ -247,7 +345,9 @@ export default function TodaysPlanScreen() {
                   style={styles.pillarAction}
                   onPress={() => navigation.navigate('Nutrition')}
                 >
-                  <Text style={styles.pillarActionText}>View Nutrition Plan</Text>
+                  <Text style={styles.pillarActionText}>
+                    {pillarProgress.nutrition.status === 'complete' ? 'View Meals' : 'Log Meals'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -264,11 +364,11 @@ export default function TodaysPlanScreen() {
                 <View style={styles.pillarTitleContainer}>
                   <Text style={styles.pillarTitle}>Recovery</Text>
                   <Text style={styles.pillarSubtitle}>
-                    Score: {todaysPlan?.recovery?.recovery_score}/100 • Sleep: {todaysPlan?.recovery?.sleep_target?.hours}h
+                    {pillarProgress.recovery.progress}
                   </Text>
                 </View>
                 <View style={styles.pillarStatus}>
-                  {todaysPlan?.recovery?.recovery_score >= 80 ? (
+                  {pillarProgress.recovery.completed ? (
                     <Text style={styles.statusCompleted}>✓</Text>
                   ) : (
                     <Text style={styles.statusPending}>○</Text>
@@ -284,18 +384,15 @@ export default function TodaysPlanScreen() {
               <View style={styles.pillarContent}>
                 <View style={styles.recoveryPreview}>
                   <View style={styles.recoveryItem}>
-                    <Text style={styles.recoveryLabel}>Sleep Target</Text>
-                    <Text style={styles.recoveryValue}>
-                      {todaysPlan?.recovery?.sleep_target?.hours} hours ({todaysPlan?.recovery?.sleep_target?.bedtime} - {todaysPlan?.recovery?.sleep_target?.wakeTime})
-                    </Text>
-                  </View>
-                  <View style={styles.recoveryItem}>
                     <Text style={styles.recoveryLabel}>Recovery Score</Text>
                     <View style={styles.scoreContainer}>
                       <View style={styles.scoreBar}>
-                        <View style={[styles.scoreProgress, { width: `${todaysPlan?.recovery?.recovery_score}%` }]} />
+                        <View style={[
+                          styles.scoreProgress, 
+                          { width: `${pillarProgress.recovery.score}%` }
+                        ]} />
                       </View>
-                      <Text style={styles.scoreText}>{todaysPlan?.recovery?.recovery_score}/100</Text>
+                      <Text style={styles.scoreText}>{pillarProgress.recovery.score}/100</Text>
                     </View>
                   </View>
                 </View>
@@ -314,11 +411,11 @@ export default function TodaysPlanScreen() {
                 <View style={styles.pillarTitleContainer}>
                   <Text style={styles.pillarTitle}>Mindset</Text>
                   <Text style={styles.pillarSubtitle}>
-                    Daily habits • Motivation check
+                    {pillarProgress.mindset.progress}
                   </Text>
                 </View>
                 <View style={styles.pillarStatus}>
-                  {todaysPlan?.mindset?.habits?.every(habit => habit.completed) ? (
+                  {pillarProgress.mindset.completed ? (
                     <Text style={styles.statusCompleted}>✓</Text>
                   ) : (
                     <Text style={styles.statusPending}>○</Text>
@@ -345,7 +442,7 @@ export default function TodaysPlanScreen() {
                     {todaysPlan?.mindset?.habits?.map((habit, index) => (
                       <View key={index} style={styles.habitItem}>
                         <Text style={styles.habitCheckbox}>
-                          {habit.completed ? '✓' : '○'}
+                          {pillarProgress.mindset.habits[habit.name]?.completed ? '✓' : '○'}
                         </Text>
                         <Text style={styles.habitName}>{habit.name}</Text>
                       </View>
@@ -360,12 +457,37 @@ export default function TodaysPlanScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-  
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  macroProgress: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  macroTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  macroLabel: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  macroValues: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',

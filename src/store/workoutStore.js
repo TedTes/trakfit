@@ -153,7 +153,7 @@ export const useWorkoutStore = create(
           )
         };
       
-        // NEW: Log workout session to logStore
+        // Log workout session to logStore
         useLogStore.getState().logWorkoutSession(completedWorkout);
       
         set((state) => ({
