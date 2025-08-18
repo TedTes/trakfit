@@ -215,16 +215,6 @@ export default function DietScreen() {
               color="#8b5cf6"
             />
           </View>
-
-          {/* Daily Summary */}
-          <View style={styles.dailySummary}>
-            <Text style={styles.summaryText}>
-              📊 {displayMeals.filter(meal => meal.eaten).length}/{displayMeals.length} meals completed
-            </Text>
-            <Text style={styles.summaryText}>
-              🎯 {Math.round((consumedMacros.calories / plannedMacros.calories) * 100)}% of daily calories consumed
-            </Text>
-          </View>
         </View>
 
         {/*  Meal Plan with Store Data */}
@@ -427,18 +417,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     minWidth: 35,
     textAlign: 'right',
-  },
-  dailySummary: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#22c55e',
-  },
-  summaryText: {
-    fontSize: 12,
-    color: '#475569',
-    marginBottom: 2,
   },
   mealPlan: {
     backgroundColor: 'white',
