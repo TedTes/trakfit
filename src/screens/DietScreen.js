@@ -24,6 +24,29 @@ export default function DietScreen() {
     generateAINutritionPlan();
   }, []);
 
+  useEffect(() => {
+    // Initialize today's meals in logStore when nutrition plan is generated
+    if (nutritionPlan?.meals) {
+      const { getTodaysMeals, logMeal } = useLogStore.getState();
+      
+      // Only initialize if no meals exist for today
+      if (!getTodaysMeals()) {
+        nutritionPlan.meals.forEach((meal, index) => {
+          logMeal({
+            name: meal.name,
+            type: meal.type,
+            protein: meal.protein || 0,
+            carbs: meal.carbs || 0,
+            fats: meal.fats || 0,
+            calories: (meal.protein * 4) + (meal.carbs * 4) + (meal.fats * 9) || 0,
+            eaten: false,
+            plannedIndex: index
+          });
+        });
+      }
+    }
+  }, [nutritionPlan]);
+
   const toggleMealCompletion = (mealIndex, meal) => {
     const isCompleted = !completedMeals[mealIndex];
     
@@ -34,9 +57,13 @@ export default function DietScreen() {
     }));
     
     if (isCompleted) {
-      // Log the meal to logStore when marked as eaten
+      // Mark meal as eaten in logStore (this will update Today's Plan)
       markMealAsEaten(mealIndex, 1);
       console.log(`Meal completed: ${meal.name}`);
+    } else {
+      // TODO : If unchecked, need to remove from logStore
+      // For now,  handle the positive case
+      console.log(`Meal unchecked: ${meal.name}`);
     }
   };
 
