@@ -28,7 +28,7 @@ export default function WorkoutScreen() {
   const profile = useUserProfileStore(state => state.profile);
   const [currentSetCounts, setCurrentSetCounts] = useState({});
   const [workoutStartTime, setWorkoutStartTime] = useState(null);
-
+  const [instructionsExpanded, setInstructionsExpanded] = useState(false);
   useEffect(() => {
     // Initialize workout if empty or ensure we have an AI workout
     if (!currentWorkout.exercises || currentWorkout.exercises.length === 0) {
@@ -246,8 +246,46 @@ export default function WorkoutScreen() {
               <Text style={styles.currentExerciseName}>{currentExercise.name}</Text>
               
               {currentExercise.instructions && (
-                <Text style={styles.exerciseInstructions}>{currentExercise.instructions}</Text>
-              )}
+  <View style={styles.instructionsContainer}>
+    <TouchableOpacity 
+      style={styles.instructionsToggle}
+      onPress={() => setInstructionsExpanded(!instructionsExpanded)}
+    >
+      <Text style={styles.instructionsToggleText}>
+        {instructionsExpanded ? '📖 Hide Instructions' : '📖 Show Instructions'}
+      </Text>
+      <Text style={styles.instructionsToggleIcon}>
+        {instructionsExpanded ? '▼' : '▶'}
+      </Text>
+    </TouchableOpacity>
+    
+    {instructionsExpanded && (
+      <Text style={styles.exerciseInstructions}>
+        {currentExercise.instructions}
+      </Text>
+    )}
+  </View>
+)}
+
+{/* Exercise Visualization Section */}
+<View style={styles.exerciseVisualizationSection}>
+  {/* Animation Viewport with 16:9 Aspect Ratio */}
+  <View style={styles.animationViewport}>
+    <Text style={styles.visualizationPlaceholder}>
+      🎬 Animation Viewport
+    </Text>
+    <Text style={styles.aspectRatioLabel}>
+      16:9 Aspect Ratio
+    </Text>
+  </View>
+  
+  {/* Future: Animation Controls will go here */}
+  <View style={styles.animationControlsPlaceholder}>
+    <Text style={styles.controlsPlaceholderText}>
+      ⏯️ Animation Controls (Coming Soon)
+    </Text>
+  </View>
+</View>
 <View style={styles.exerciseVisualizationSection}>
     <Text style={styles.visualizationPlaceholder}>
       🎬 Animation Area (Coming Soon)
@@ -417,21 +455,46 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   exerciseVisualizationSection: {
-    height: 200,
     backgroundColor: '#f8fafc',
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#e2e8f0',
     borderStyle: 'dashed',
     marginBottom: 20,
+    padding: 16,
+  },
+  animationViewport: {
+    width: '100%',
+    aspectRatio: 16/9, 
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   visualizationPlaceholder: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 18,
+    color: '#e2e8f0',
     fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 4,
+  },
+  aspectRatioLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  animationControlsPlaceholder: {
+    backgroundColor: '#e2e8f0',
+    borderRadius: 6,
+    padding: 8,
+    alignItems: 'center',
+  },
+  controlsPlaceholderText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
   },
   overviewStats: {
     flexDirection: 'row',
@@ -681,5 +744,38 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  instructionsContainer: {
+    marginBottom: 16,
+  },
+  instructionsToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  instructionsToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  instructionsToggleIcon: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: 'bold',
+  },
+  exerciseInstructions: {
+    fontSize: 16,
+    color: '#64748b',
+    lineHeight: 22,
+    backgroundColor: '#fafafa',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6366f1',
   },
 });
