@@ -229,7 +229,7 @@ export default function WorkoutScreen() {
         {isWorkoutActive && currentExercise && (
           <View style={styles.activeWorkoutSection}>
             
-            {/* Current Exercise Card */}
+      
             <View style={styles.currentExerciseCard}>
               <View style={styles.exerciseHeader}>
                 <View style={[styles.exerciseBadge, { backgroundColor: currentExercise.color }]}>
@@ -248,7 +248,11 @@ export default function WorkoutScreen() {
               {currentExercise.instructions && (
                 <Text style={styles.exerciseInstructions}>{currentExercise.instructions}</Text>
               )}
-
+<View style={styles.exerciseVisualizationSection}>
+    <Text style={styles.visualizationPlaceholder}>
+      🎬 Animation Area (Coming Soon)
+    </Text>
+  </View>
               {/* Set Progress */}
               <View style={styles.setProgressSection}>
                 <Text style={styles.setProgressTitle}>
@@ -411,6 +415,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e293b',
     marginBottom: 16,
+  },
+  exerciseVisualizationSection: {
+    height: 200,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  visualizationPlaceholder: {
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   overviewStats: {
     flexDirection: 'row',
