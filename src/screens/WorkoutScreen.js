@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -31,6 +31,9 @@ export default function WorkoutScreen() {
   const [workoutStartTime, setWorkoutStartTime] = useState(null);
   const [instructionsExpanded, setInstructionsExpanded] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
+
+  const scrollViewRef = useRef(null);
+  const animationViewportRef = useRef(null);
   useEffect(() => {
     // Initialize workout if empty or ensure we have an AI workout
     if (!currentWorkout.exercises || currentWorkout.exercises.length === 0) {
@@ -46,6 +49,33 @@ export default function WorkoutScreen() {
     return () => subscription?.remove();
   }, []);
 
+ // Scroll to animation viewport when exercise changes
+  useEffect(() => {
+    if (isWorkoutActive && animationViewportRef.current && scrollViewRef.current) {
+      // Delay to ensure layout is complete
+      const scrollTimer = setTimeout(() => {
+        animationViewportRef.current.measureLayout(
+          scrollViewRef.current,
+          (x, y, width, height) => {
+            // Calculate optimal scroll position (center viewport in view)
+            const { height: screenHeight } = screenData;
+            const headerHeight = 120; // Approximate header height
+            const optimalY = Math.max(0, y - (screenHeight - headerHeight - height) / 2);
+            
+            scrollViewRef.current.scrollTo({
+              y: optimalY,
+              animated: true,
+            });
+          },
+          (error) => {
+            console.log('Scroll measurement failed:', error);
+          }
+        );
+      }, 300);
+
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [currentExerciseIndex, isWorkoutActive, screenData]);
   const getAnimationContainerStyle = () => {
     const { width, height } = screenData;
     const isTablet = width >= 768;
@@ -164,7 +194,15 @@ export default function WorkoutScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+       ref={scrollViewRef}
+       style={styles.content} 
+       showsVerticalScrollIndicator={false}
+       scrollEventThrottle={16}
+       bounces={true}
+       bouncesZoom={false}
+       decelerationRate="normal"
+       keyboardShouldPersistTaps="handled">
         
         {/* Workout Header */}
         <LinearGradient
