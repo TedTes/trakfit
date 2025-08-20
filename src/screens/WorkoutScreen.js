@@ -6,7 +6,8 @@ import {
   SafeAreaView, 
   ScrollView, 
   TouchableOpacity,
-  Alert
+  Alert,
+  Dimensions
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWorkoutStore } from '../store/workoutStore';
@@ -29,6 +30,7 @@ export default function WorkoutScreen() {
   const [currentSetCounts, setCurrentSetCounts] = useState({});
   const [workoutStartTime, setWorkoutStartTime] = useState(null);
   const [instructionsExpanded, setInstructionsExpanded] = useState(false);
+  const [screenData, setScreenData] = useState(Dimensions.get('window'));
   useEffect(() => {
     // Initialize workout if empty or ensure we have an AI workout
     if (!currentWorkout.exercises || currentWorkout.exercises.length === 0) {
@@ -36,6 +38,34 @@ export default function WorkoutScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenData(window);
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const getAnimationContainerStyle = () => {
+    const { width, height } = screenData;
+    const isTablet = width >= 768;
+    const isLandscape = width > height;
+
+    // Base sizing with constraints
+    let containerWidth = width - 72; // Account for padding (20 + 20 + 16 + 16)
+    
+    // Apply size constraints
+    const minWidth = 280;
+    const maxWidth = isTablet ? 600 : 480;
+    
+    containerWidth = Math.max(minWidth, Math.min(maxWidth, containerWidth));
+    
+    return {
+      width: containerWidth,
+      maxHeight: isLandscape ? height * 0.4 : height * 0.25,
+      minHeight: isTablet ? 200 : 160,
+    };
+  };
   const currentExercise = currentWorkout.exercises?.[currentExerciseIndex];
   const isLastExercise = currentExerciseIndex >= (currentWorkout.exercises?.length - 1);
   const totalExercises = currentWorkout.exercises?.length || 0;
@@ -269,17 +299,20 @@ export default function WorkoutScreen() {
 
 {/* Exercise Visualization Section */}
 <View style={styles.exerciseVisualizationSection}>
-  {/* Animation Viewport with 16:9 Aspect Ratio */}
-  <View style={styles.animationViewport}>
+  {/* Animation Viewport with Responsive Sizing */}
+  <View style={[styles.animationViewport, getAnimationContainerStyle()]}>
     <Text style={styles.visualizationPlaceholder}>
       🎬 Animation Viewport
     </Text>
     <Text style={styles.aspectRatioLabel}>
-      16:9 Aspect Ratio
+      {screenData.width >= 768 ? 'Tablet View' : 'Phone View'} • 16:9 Ratio
+    </Text>
+    <Text style={styles.dimensionsLabel}>
+      {Math.round(getAnimationContainerStyle().width)}×{Math.round(getAnimationContainerStyle().width * 9/16)}px
     </Text>
   </View>
   
-  {/* Future: Animation Controls will go here */}
+  {/* Animation Controls Placeholder */}
   <View style={styles.animationControlsPlaceholder}>
     <Text style={styles.controlsPlaceholderText}>
       ⏯️ Animation Controls (Coming Soon)
@@ -462,10 +495,10 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     marginBottom: 20,
     padding: 16,
+    alignItems: 'center', 
   },
   animationViewport: {
-    width: '100%',
-    aspectRatio: 16/9, 
+    aspectRatio: 16/9,
     backgroundColor: '#1e293b',
     borderRadius: 8,
     justifyContent: 'center',
@@ -474,16 +507,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   visualizationPlaceholder: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#e2e8f0',
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 4,
   },
   aspectRatioLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94a3b8',
     fontWeight: '500',
+    marginBottom: 2,
   },
   animationControlsPlaceholder: {
     backgroundColor: '#e2e8f0',
@@ -778,4 +812,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#6366f1',
   },
+  dimensionsLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '400',
+    fontFamily: 'monospace',
+  }
 });
